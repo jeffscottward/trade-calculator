@@ -33,7 +33,9 @@ def main():
         logger.info("="*50)
         
         # Try importing each module separately to identify issues
-        logger.info("Step 1: Importing tkinter_fix...")
+        logger.info("Step 1: Setting up paths and importing tkinter_fix...")
+        sys.path.insert(0, os.path.dirname(__file__))
+        sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
         import tkinter_fix
         logger.info("✓ tkinter_fix imported successfully")
         

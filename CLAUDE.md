@@ -28,17 +28,17 @@ pip install -r requirements.txt
 python calculator.py
 
 # Debug mode with detailed logging
-python run_with_debug.py
+python scripts/run_with_debug.py
 
 # Test Yahoo Finance connection
-python test_yfinance.py
+python scripts/test_yfinance.py
 ```
 
 ### Development and Testing
 ```bash
 # No automated tests currently - manual GUI testing required
 # Check Yahoo Finance API status if rate limiting occurs
-python test_yfinance.py
+python scripts/test_yfinance.py
 ```
 
 ## Architecture and Key Components
@@ -53,10 +53,11 @@ python test_yfinance.py
 
 ### Python 3.13 Compatibility
 
-**tkinter_fix.py** - Critical compatibility layer
+**scripts/tkinter_fix.py** - Critical compatibility layer
 - Patches tkinter's trace methods that changed in Python 3.13
 - Must be imported before FreeSimpleGUI to prevent crashes
 - Converts old trace modes ('w', 'r', 'u') to new API ('write', 'read', 'unset')
+- Automatically loaded by calculator.py from scripts folder
 
 ### Data Flow
 
@@ -70,7 +71,7 @@ python test_yfinance.py
 
 The application handles Yahoo Finance API rate limits (HTTP 429):
 - Automatic cookie/crumb refresh on failure
-- Cache clearing utility in test_yfinance.py
+- Cache clearing utility in scripts/test_yfinance.py
 - Retry logic with strategy toggling (basic ↔ csrf)
 
 ### GUI State Management
@@ -84,14 +85,19 @@ The application handles Yahoo Finance API rate limits (HTTP 429):
 ### API Rate Limits
 Yahoo Finance enforces rate limiting. If encountering 429 errors:
 1. Wait 1-2 minutes before retrying
-2. Run `python test_yfinance.py` to verify API access
+2. Run `python scripts/test_yfinance.py` to verify API access
 3. Clear cache if persistent issues occur
 
 ### Virtual Environment
 Always use the virtual environment to ensure correct package versions, especially for FreeSimpleGUI compatibility.
 
 ### Debugging
-Use `python run_with_debug.py` for detailed logging. Logs are saved with timestamps in format `debug_YYYYMMDD_HHMMSS.log`.
+Use `python scripts/run_with_debug.py` for detailed logging. Logs are saved with timestamps in `logs/` folder in format `debug_YYYYMMDD_HHMMSS.log`.
+
+### Project Organization
+- **docs/**: Contains documentation, Excel tracker, PDF research, and YouTube transcript
+- **scripts/**: Utility scripts for debugging and testing
+- **logs/**: Debug logs (gitignored, created automatically)
 
 ## External Resources
 

@@ -7,6 +7,9 @@ The developers are not financial advisors and accept no responsibility for any f
 Always consult a professional financial advisor before making any investment decisions.
 """
 
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'scripts'))
 import tkinter_fix  # Compatibility fix for Python 3.13
 import FreeSimpleGUI as sg
 import yfinance as yf

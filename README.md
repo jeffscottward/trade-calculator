@@ -46,7 +46,12 @@ python calculator.py
 
 For debugging with detailed logs:
 ```bash
-python run_with_debug.py
+python scripts/run_with_debug.py
+```
+
+To test Yahoo Finance connection:
+```bash
+python scripts/test_yfinance.py
 ```
 
 ## 📚 Documentation
@@ -78,14 +83,23 @@ This software is provided solely for educational and research purposes. It is no
 
 If you encounter Yahoo Finance rate limiting (429 errors):
 1. Wait 1-2 minutes and try again
-2. Run `python test_yfinance.py` to test the connection
+2. Run `python scripts/test_yfinance.py` to test the connection
 3. Check the Discord community for support
 
 ## 📁 Project Structure
 
-- `calculator.py` - Main application with GUI
-- `requirements.txt` - Python dependencies
-- `tkinter_fix.py` - Python 3.13 compatibility layer
-- `run_with_debug.py` - Debug wrapper with detailed logging
-- `test_yfinance.py` - Yahoo Finance connection tester
-- `youtube_transcript.txt` - Full transcript from the tutorial video
+```
+trade-calculator/
+├── calculator.py           # Main application with GUI
+├── requirements.txt        # Python dependencies
+├── docs/                  # Documentation and resources
+│   ├── Earnings Research.pdf
+│   ├── Earnings Tracker.xlsx
+│   └── youtube_transcript.txt
+├── scripts/               # Utility scripts
+│   ├── calculator_debug.py    # Debug version with error tracking
+│   ├── run_with_debug.py      # Debug wrapper with detailed logging
+│   ├── test_yfinance.py       # Yahoo Finance connection tester
+│   └── tkinter_fix.py         # Python 3.13 compatibility layer
+└── logs/                  # Debug logs (gitignored)
+```

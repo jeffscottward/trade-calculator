@@ -22,7 +22,9 @@ try:
     logging.info("Starting calculator application...")
     logging.info(f"Python version: {sys.version}")
     
-    logging.info("Importing tkinter_fix...")
+    logging.info("Setting up paths and importing tkinter_fix...")
+    sys.path.insert(0, os.path.dirname(__file__))
+    sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
     import tkinter_fix
     
     logging.info("Importing FreeSimpleGUI...")
