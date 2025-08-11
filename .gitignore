@@ -46,9 +46,10 @@ calculator_output.txt
 __pycache__/
 *.pyc
 
-# Environment variables
+# Environment variables - CRITICAL FOR SECURITY
 .env
 .env.local
+.env.production
 
 # Database
 *.db
