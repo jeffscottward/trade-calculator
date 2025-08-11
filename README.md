@@ -54,6 +54,15 @@ To test Yahoo Finance connection:
 python scripts/test_yfinance.py
 ```
 
+### Running the IB Client Portal API Server
+
+```bash
+# Start the IB Client Portal API server on port 5001
+python automation/ib_client_portal_server.py
+```
+
+Note: The server is configured to run on port 5001 instead of the default 5000.
+
 ## 📚 Documentation
 
 ### Installation Guide
@@ -84,9 +93,10 @@ This system implements a systematic approach to selling earnings volatility thro
 - **GUI Interface**: User-friendly interface built with FreeSimpleGUI
 - **Trade Qualification**: Analyzes term structure, volume, and IV/RV ratios
 
-### Planned Automation Features (In Development)
+### Automation Features
 - **Automated Scanning**: Daily earnings event detection via Alpha Vantage API
-- **Interactive Brokers Integration**: Automated order execution
+- **Interactive Brokers Integration**: Automated order execution via TWS/Gateway API
+- **IB Client Portal API**: REST API for account data and trading (port 5001)
 - **Position Management**: Automatic entry 15 min before close, exit 15 min after open
 - **Risk Controls**: Portfolio limits, drawdown monitoring, emergency stops
 - **Performance Tracking**: Real-time P&L, win rate, and Sharpe ratio monitoring
@@ -112,6 +122,7 @@ After researching multiple broker APIs, we've selected **Interactive Brokers** f
 - **Earnings Calendar**: Alpha Vantage (500 free API calls/day)
 - **Market Data**: Yahoo Finance via yfinance library
 - **Backup Data**: Interactive Brokers real-time feed
+- **IB Client Portal API**: REST API documentation at [IB Campus](https://www.interactivebrokers.com/campus/ibkr-api-page/cpapi-v1/#introduction)
 
 ## 🔄 Automated Trading Workflow
 
@@ -147,10 +158,11 @@ trade-calculator/
 │   ├── run_with_debug.py     # Debug wrapper with detailed logging
 │   ├── test_yfinance.py      # Yahoo Finance connection tester
 │   └── tkinter_fix.py        # Python 3.13 compatibility layer
-├── automation/ (planned)      # Automated trading modules
+├── automation/                # Automated trading modules
 │   ├── earnings_scanner.py   # Daily earnings event scanner
 │   ├── trade_executor.py     # IB order execution
 │   ├── position_manager.py   # Entry/exit automation
-│   └── risk_monitor.py       # Risk management system
+│   ├── risk_monitor.py       # Risk management system
+│   └── ib_client_portal_server.py # IB Client Portal API server (port 5001)
 └── logs/                      # Debug logs (gitignored)
 ```
