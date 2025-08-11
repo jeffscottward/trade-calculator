@@ -1,6 +1,6 @@
-# Trade Calculator
+# Automated Earnings Volatility Trading System
 
-An options trading calculator with Black-Scholes pricing model and real-time Yahoo Finance data integration.
+An automated options trading system that sells volatility around earnings events using calendar spreads, with Interactive Brokers integration for execution.
 
 ## 📺 Video Tutorial
 
@@ -67,17 +67,62 @@ Get the trade tracking spreadsheet: [Google Sheets Template](https://docs.google
 - Go to File → Make a copy (for Google Sheets)
 - Or download for Excel (tested primarily in Google Sheets)
 
+## 🎯 Strategy Overview
+
+This system implements a systematic approach to selling earnings volatility through calendar spreads:
+- **Win Rate**: 66% historical success rate
+- **Expected Return**: 7.3% per trade
+- **Risk Management**: 6% position sizing (10% Kelly criterion)
+- **Trade Structure**: Long calendar spreads (sell front month, buy back month)
+
 ## 🛠️ Features
 
+### Current Features
 - **Black-Scholes Options Pricing**: Accurate theoretical options pricing
 - **Yang-Zhang Volatility**: Advanced volatility calculation for better accuracy
 - **Real-time Data**: Live market data from Yahoo Finance
 - **GUI Interface**: User-friendly interface built with FreeSimpleGUI
-- **Python 3.13 Compatibility**: Includes compatibility fixes for latest Python versions
+- **Trade Qualification**: Analyzes term structure, volume, and IV/RV ratios
+
+### Planned Automation Features (In Development)
+- **Automated Scanning**: Daily earnings event detection via Alpha Vantage API
+- **Interactive Brokers Integration**: Automated order execution
+- **Position Management**: Automatic entry 15 min before close, exit 15 min after open
+- **Risk Controls**: Portfolio limits, drawdown monitoring, emergency stops
+- **Performance Tracking**: Real-time P&L, win rate, and Sharpe ratio monitoring
 
 ## 📋 Disclaimer
 
 This software is provided solely for educational and research purposes. It is not intended to provide investment advice, and no investment recommendations are made herein. The developers are not financial advisors and accept no responsibility for any financial decisions or losses resulting from the use of this software. Always consult a professional financial advisor before making any investment decisions.
+
+## 🏦 Broker Integration
+
+### Why Interactive Brokers?
+
+After researching multiple broker APIs, we've selected **Interactive Brokers** for the following reasons:
+
+1. **Best API Support**: Native Python API with excellent documentation and stability
+2. **Competitive Pricing**: $0.15-$0.65 per options contract for active traders
+3. **Professional Features**: Advanced order types, portfolio margin, international markets
+4. **Proven Track Record**: Used in the original research and backtesting
+5. **No Token Expiration**: Unlike Schwab's 7-day tokens, IB maintains persistent connections
+
+### Data Sources
+
+- **Earnings Calendar**: Alpha Vantage (500 free API calls/day)
+- **Market Data**: Yahoo Finance via yfinance library
+- **Backup Data**: Interactive Brokers real-time feed
+
+## 🔄 Automated Trading Workflow
+
+1. **Daily Scan (3:00 PM ET)**: Identify tomorrow's earnings events
+2. **Qualification**: Check term structure, volume, and IV/RV ratios
+3. **Position Sizing**: Calculate 6% portfolio allocation per trade
+4. **Order Entry**: Place calendar spread 15 minutes before close
+5. **Exit**: Close position 15 minutes after market open next day
+6. **Logging**: Track all trades and performance metrics
+
+See [System Design Document](docs/SYSTEM_DESIGN.md) for detailed architecture.
 
 ## 🐛 Troubleshooting
 
@@ -90,16 +135,22 @@ If you encounter Yahoo Finance rate limiting (429 errors):
 
 ```
 trade-calculator/
-├── calculator.py           # Main application with GUI
-├── requirements.txt        # Python dependencies
-├── docs/                  # Documentation and resources
-│   ├── Earnings Research.pdf
-│   ├── Earnings Tracker.xlsx
-│   └── youtube_transcript.txt
-├── scripts/               # Utility scripts
-│   ├── calculator_debug.py    # Debug version with error tracking
-│   ├── run_with_debug.py      # Debug wrapper with detailed logging
-│   ├── test_yfinance.py       # Yahoo Finance connection tester
-│   └── tkinter_fix.py         # Python 3.13 compatibility layer
-└── logs/                  # Debug logs (gitignored)
+├── calculator.py              # Main application with GUI
+├── requirements.txt           # Python dependencies
+├── docs/                      # Documentation and resources
+│   ├── SYSTEM_DESIGN.md      # Automated trading system architecture
+│   ├── Earnings Research.pdf # Original strategy research
+│   ├── Earnings Tracker.xlsx # Trade tracking spreadsheet
+│   └── youtube_transcript.txt# Full strategy explanation
+├── scripts/                   # Utility scripts
+│   ├── calculator_debug.py   # Debug version with error tracking
+│   ├── run_with_debug.py     # Debug wrapper with detailed logging
+│   ├── test_yfinance.py      # Yahoo Finance connection tester
+│   └── tkinter_fix.py        # Python 3.13 compatibility layer
+├── automation/ (planned)      # Automated trading modules
+│   ├── earnings_scanner.py   # Daily earnings event scanner
+│   ├── trade_executor.py     # IB order execution
+│   ├── position_manager.py   # Entry/exit automation
+│   └── risk_monitor.py       # Risk management system
+└── logs/                      # Debug logs (gitignored)
 ```
