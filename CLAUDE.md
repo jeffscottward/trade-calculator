@@ -4,19 +4,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is an options trading calculator that provides Black-Scholes pricing with real-time Yahoo Finance data integration. The application uses a GUI built with FreeSimpleGUI and implements Yang-Zhang volatility calculations for more accurate options pricing.
+Options trading calculator implementing Black-Scholes pricing model with real-time Yahoo Finance data. Features a GUI built with FreeSimpleGUI and uses Yang-Zhang volatility calculations for improved accuracy over standard historical volatility.
 
 ## Key Commands
 
-### Setup and Installation
+### Setup
 ```bash
-# Create virtual environment
+# Create and activate virtual environment
 python -m venv venv
-
-# Activate virtual environment
-source venv/bin/activate  # macOS/Linux
-# or
-venv\Scripts\activate  # Windows
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
@@ -24,83 +20,88 @@ pip install -r requirements.txt
 
 ### Running the Application
 ```bash
-# Main application
+# Main calculator GUI
 python calculator.py
 
-# Debug mode with detailed logging
+# Debug mode with detailed logging (logs to logs/ folder)
 python scripts/run_with_debug.py
 
-# Test Yahoo Finance connection
+# Test Yahoo Finance API connectivity
 python scripts/test_yfinance.py
 ```
 
-### Development and Testing
-```bash
-# No automated tests currently - manual GUI testing required
-# Check Yahoo Finance API status if rate limiting occurs
-python scripts/test_yfinance.py
+## Architecture
+
+### Core Components
+
+**calculator.py** - Main application
+- `compute_recommendation()`: Core calculation engine that fetches options chains and calculates recommendations
+- `yang_zhang()`: Implements Yang-Zhang volatility estimator using OHLC data for more accurate volatility than simple close-to-close
+- `build_term_structure()`: Creates interpolated implied volatility curve from discrete option expiration dates
+- `filter_dates()`: Filters option expiration dates to only include those 45+ days out
+- `main_gui()`: GUI event loop with threading for non-blocking API calls
+
+### Critical Dependencies
+
+**scripts/tkinter_fix.py**
+- MUST be imported before FreeSimpleGUI on Python 3.13+
+- Patches tkinter's trace method API changes (w→write, r→read, u→unset)
+- Without this, application crashes on Python 3.13 with `_tkinter.TclError`
+
+### Threading Model
+
+The application uses threading to prevent UI freezes during Yahoo Finance API calls:
+1. User input triggers background thread
+2. Thread fetches options data and performs calculations
+3. Main thread polls for completion and updates GUI
+4. Window values dictionary maintains state between updates
+
+### Yahoo Finance Integration
+
+Rate limiting handling:
+- Automatic retry with cookie strategy toggling (basic ↔ csrf)
+- HTTP 429 errors require 1-2 minute wait
+- Cache stored in `~/.cache/py-yfinance`
+- Test connectivity with `python scripts/test_yfinance.py`
+
+## Project Structure
+
+```
+trade-calculator/
+├── calculator.py           # Main application
+├── requirements.txt        # Dependencies
+├── docs/                   # Documentation
+│   ├── Earnings Research.pdf
+│   ├── Earnings Tracker.xlsx
+│   └── youtube_transcript.txt
+├── scripts/                # Utility scripts
+│   ├── calculator_debug.py # Debug wrapper
+│   ├── run_with_debug.py   # Detailed logging runner
+│   ├── test_yfinance.py    # API connectivity test
+│   └── tkinter_fix.py      # Python 3.13+ compatibility
+└── logs/                   # Debug logs (gitignored)
 ```
 
-## Architecture and Key Components
+## Common Issues and Solutions
 
-### Core Modules
-
-**calculator.py** - Main application entry point
-- `main_gui()`: Primary GUI loop that handles user interaction and real-time data updates
-- `yang_zhang()`: Implements Yang-Zhang volatility estimator for more accurate volatility calculations than simple historical volatility
-- `build_term_structure()`: Creates interpolated volatility term structure from options chain data
-- Thread-based architecture for non-blocking Yahoo Finance API calls
+### Yahoo Finance Rate Limiting (429 errors)
+1. Wait 1-2 minutes for rate limit reset
+2. Run `python scripts/test_yfinance.py` to verify API access
+3. Clear cache if persistent: `rm -rf ~/.cache/py-yfinance`
 
 ### Python 3.13 Compatibility
+The tkinter_fix.py module is automatically imported to handle API changes. If seeing tkinter trace errors, ensure calculator.py imports are in correct order.
 
-**scripts/tkinter_fix.py** - Critical compatibility layer
-- Patches tkinter's trace methods that changed in Python 3.13
-- Must be imported before FreeSimpleGUI to prevent crashes
-- Converts old trace modes ('w', 'r', 'u') to new API ('write', 'read', 'unset')
-- Automatically loaded by calculator.py from scripts folder
-
-### Data Flow
-
-1. User inputs ticker symbol → spawns background thread
-2. Thread fetches options chain from Yahoo Finance API
-3. Extracts and filters expiration dates (45+ days out)
-4. Calculates implied volatility term structure
-5. Updates GUI with real-time pricing
-
-### Yahoo Finance Rate Limiting
-
-The application handles Yahoo Finance API rate limits (HTTP 429):
-- Automatic cookie/crumb refresh on failure
-- Cache clearing utility in scripts/test_yfinance.py
-- Retry logic with strategy toggling (basic ↔ csrf)
-
-### GUI State Management
-
-- Non-blocking updates using threading
-- Window values persist between updates
-- Real-time price refresh without freezing UI
-
-## Important Considerations
-
-### API Rate Limits
-Yahoo Finance enforces rate limiting. If encountering 429 errors:
-1. Wait 1-2 minutes before retrying
-2. Run `python scripts/test_yfinance.py` to verify API access
-3. Clear cache if persistent issues occur
-
-### Virtual Environment
-Always use the virtual environment to ensure correct package versions, especially for FreeSimpleGUI compatibility.
-
-### Debugging
-Use `python scripts/run_with_debug.py` for detailed logging. Logs are saved with timestamps in `logs/` folder in format `debug_YYYYMMDD_HHMMSS.log`.
-
-### Project Organization
-- **docs/**: Contains documentation, Excel tracker, PDF research, and YouTube transcript
-- **scripts/**: Utility scripts for debugging and testing
-- **logs/**: Debug logs (gitignored, created automatically)
+### Debug Workflow
+Use `python scripts/run_with_debug.py` which:
+- Creates timestamped logs in `logs/` folder
+- Shows step-by-step import process
+- Captures full stack traces with line numbers
+- Helps identify rate limiting vs code issues
 
 ## External Resources
 
-- Discord support: https://discord.gg/krdByJHuHc
-- Monte Carlo/Backtest results: https://docs.google.com/document/d/1_7UoFIqrTftoz-PJ0rxkttMc24inrAbWuZSbbOV-Jwk/
-- Trade Tracker Template: https://docs.google.com/spreadsheets/d/1z_PMFqmV_2XqlCcCAdA4wgxqDg0Ym7iSeygNRpsnpO8/
+- **Discord Support**: https://discord.gg/krdByJHuHc
+- **YouTube Tutorial**: https://www.youtube.com/watch?v=oW6MHjzxHpU
+- **Monte Carlo Results**: https://docs.google.com/document/d/1_7UoFIqrTftoz-PJ0rxkttMc24inrAbWuZSbbOV-Jwk/
+- **Trade Tracker Template**: https://docs.google.com/spreadsheets/d/1z_PMFqmV_2XqlCcCAdA4wgxqDg0Ym7iSeygNRpsnpO8/
