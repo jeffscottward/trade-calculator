@@ -4,104 +4,136 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Options trading calculator implementing Black-Scholes pricing model with real-time Yahoo Finance data. Features a GUI built with FreeSimpleGUI and uses Yang-Zhang volatility calculations for improved accuracy over standard historical volatility.
+Automated earnings volatility trading system that sells calendar spreads around quarterly earnings events. Implements a systematic strategy with 66% historical win rate and 7.3% expected return per trade using Interactive Brokers API for execution.
+
+## Critical Security Note
+
+**NEVER expose credentials in code**. All sensitive data must be in `.env` file (gitignored). Check `.env.example` for required variables.
 
 ## Key Commands
 
-### Setup
+### Environment Setup
 ```bash
 # Create and activate virtual environment
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate  # Windows: venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
+
+# Copy and configure environment variables
+cp .env.example .env
+# Edit .env with actual credentials
 ```
 
-### Running the Application
+### Running Components
 ```bash
-# Main calculator GUI
+# Manual trade calculator GUI
 python calculator.py
 
-# Debug mode with detailed logging (logs to logs/ folder)
-python scripts/run_with_debug.py
+# Automated earnings scanner (runs daily at 3 PM ET via cron)
+python automation/earnings_scanner.py
 
-# Test Yahoo Finance API connectivity
-python scripts/test_yfinance.py
+# Trade executor (handles IB order placement)
+python automation/trade_executor.py
+
+# Debug mode
+python scripts/run_with_debug.py
+```
+
+### Database Setup
+```bash
+# Initialize Neon DB schema
+python automation/database/init_db.py
 ```
 
 ## Architecture
 
-### Core Components
+### System Components
 
-**calculator.py** - Main application
-- `compute_recommendation()`: Core calculation engine that fetches options chains and calculates recommendations
-- `yang_zhang()`: Implements Yang-Zhang volatility estimator using OHLC data for more accurate volatility than simple close-to-close
-- `build_term_structure()`: Creates interpolated implied volatility curve from discrete option expiration dates
-- `filter_dates()`: Filters option expiration dates to only include those 45+ days out
-- `main_gui()`: GUI event loop with threading for non-blocking API calls
+**automation/** - Core automated trading modules
+- `earnings_scanner.py`: Daily scan for qualifying earnings events (Alpha Vantage API)
+- `trade_executor.py`: Interactive Brokers order execution engine
+- `position_manager.py`: Entry/exit timing automation (15 min before close/after open)
+- `risk_monitor.py`: Portfolio limits and drawdown protection
+- `config.py`: Central configuration (loads from .env)
 
-### Critical Dependencies
+**calculator.py** - Manual trade analysis GUI
+- Uses Yang-Zhang volatility for accurate option pricing
+- Analyzes term structure slope for trade qualification
+- Threading model prevents UI freezes during API calls
 
-**scripts/tkinter_fix.py**
-- MUST be imported before FreeSimpleGUI on Python 3.13+
-- Patches tkinter's trace method API changes (w→write, r→read, u→unset)
-- Without this, application crashes on Python 3.13 with `_tkinter.TclError`
+**scripts/tkinter_fix.py** - Critical Python 3.13+ compatibility
+- Must be imported before FreeSimpleGUI
+- Patches tkinter trace method API changes
 
-### Threading Model
+### Trading Strategy Rules
 
-The application uses threading to prevent UI freezes during Yahoo Finance API calls:
-1. User input triggers background thread
-2. Thread fetches options data and performs calculations
-3. Main thread polls for completion and updates GUI
-4. Window values dictionary maintains state between updates
+1. **Entry Criteria** (ALL must be met):
+   - Negative term structure slope (front month vs 45+ days)
+   - 30-day average volume > 1M shares
+   - IV/RV ratio > 1.2
 
-### Yahoo Finance Integration
+2. **Position Sizing**: 
+   - 6% of portfolio per trade (10% Kelly criterion)
+   - Maximum 3 concurrent positions
+   - 20% max total exposure
 
-Rate limiting handling:
-- Automatic retry with cookie strategy toggling (basic ↔ csrf)
-- HTTP 429 errors require 1-2 minute wait
-- Cache stored in `~/.cache/py-yfinance`
-- Test connectivity with `python scripts/test_yfinance.py`
+3. **Trade Structure**:
+   - Calendar spreads: Sell front month, buy back month (30-day gap)
+   - Entry: 15 minutes before market close day before earnings
+   - Exit: 15 minutes after market open day after earnings
 
-## Project Structure
+### Database Schema (Neon DB PostgreSQL)
 
-```
-trade-calculator/
-├── calculator.py           # Main application
-├── requirements.txt        # Dependencies
-├── docs/                   # Documentation
-│   ├── Earnings Research.pdf
-│   ├── Earnings Tracker.xlsx
-│   └── youtube_transcript.txt
-├── scripts/                # Utility scripts
-│   ├── calculator_debug.py # Debug wrapper
-│   ├── run_with_debug.py   # Detailed logging runner
-│   ├── test_yfinance.py    # API connectivity test
-│   └── tkinter_fix.py      # Python 3.13+ compatibility
-└── logs/                   # Debug logs (gitignored)
-```
+Key tables:
+- `earnings_events`: Tracks scanned earnings with qualification metrics
+- `trades`: Records all positions with entry/exit prices and P&L
+- `performance_metrics`: Daily performance statistics
 
-## Common Issues and Solutions
+Uses PostgreSQL-specific features: SERIAL ids, TIMESTAMP WITH TIME ZONE, triggers for updated_at
 
-### Yahoo Finance Rate Limiting (429 errors)
-1. Wait 1-2 minutes for rate limit reset
-2. Run `python scripts/test_yfinance.py` to verify API access
-3. Clear cache if persistent: `rm -rf ~/.cache/py-yfinance`
+### External APIs
 
-### Python 3.13 Compatibility
-The tkinter_fix.py module is automatically imported to handle API changes. If seeing tkinter trace errors, ensure calculator.py imports are in correct order.
+**Alpha Vantage**: Earnings calendar (500 calls/day free tier)
+**Yahoo Finance**: Real-time options chains and volatility
+**Interactive Brokers**: Order execution and market data backup
 
-### Debug Workflow
-Use `python scripts/run_with_debug.py` which:
-- Creates timestamped logs in `logs/` folder
-- Shows step-by-step import process
-- Captures full stack traces with line numbers
-- Helps identify rate limiting vs code issues
+## Development Workflow
+
+### Adding New Features
+1. Update relevant module in `automation/`
+2. Add database migrations if schema changes needed
+3. Update risk limits in `config.py` if necessary
+4. Test with paper trading account first (port 7497)
+
+### Debugging Issues
+- Check `logs/` folder for detailed debug output
+- Yahoo Finance 429 errors: Wait 1-2 minutes or use `python scripts/test_yfinance.py`
+- IB connection issues: Ensure TWS/Gateway running on correct port
+
+## Critical Files Not to Modify
+
+- `.env` - Contains actual credentials (local only)
+- `scripts/tkinter_fix.py` - Breaks GUI on Python 3.13+ if changed
+- Database migration files once applied
+
+## Testing Strategy
+
+1. Paper trade with IB paper account (port 7497)
+2. Start with 1% position sizing
+3. Monitor first 20 trades before scaling to 6%
+4. Track performance metrics in Neon DB
+
+## Broker Configuration
+
+Using **Interactive Brokers Pro** account (not Lite) for:
+- Unrestricted API access
+- Better execution for options
+- No rejection of automated orders
 
 ## External Resources
 
-- **Discord Support**: https://discord.gg/krdByJHuHc
-- **YouTube Tutorial**: https://www.youtube.com/watch?v=oW6MHjzxHpU
-- **Monte Carlo Results**: https://docs.google.com/document/d/1_7UoFIqrTftoz-PJ0rxkttMc24inrAbWuZSbbOV-Jwk/
-- **Trade Tracker Template**: https://docs.google.com/spreadsheets/d/1z_PMFqmV_2XqlCcCAdA4wgxqDg0Ym7iSeygNRpsnpO8/
+- System Design: `docs/SYSTEM_DESIGN.md`
+- Strategy Research: `docs/Earnings Research.pdf`
+- Discord Support: https://discord.gg/krdByJHuHc

@@ -1,4 +1,21 @@
+# GUI and Calculator
 FreeSimpleGUI==5.1.1
+
+# Data Analysis
 numpy==2.1
 scipy==1.15.1
+pandas==2.1.4
+
+# Market Data
 yfinance==0.2.54
+requests==2.31.0
+
+# Database
+psycopg2-binary==2.9.9
+
+# Interactive Brokers
+ibapi==10.19.2
+
+# Utilities
+python-dotenv==1.0.0
+pytz==2024.1
