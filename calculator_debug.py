@@ -7,11 +7,13 @@ import traceback
 import logging
 
 # Set up logging
+import os
+os.makedirs('logs', exist_ok=True)
 logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('calculator_debug.log'),
+        logging.FileHandler('logs/calculator_debug.log'),
         logging.StreamHandler()
     ]
 )
@@ -45,5 +47,5 @@ except Exception as e:
     logging.error(f"Error occurred: {type(e).__name__}: {str(e)}")
     logging.error(f"Full traceback:\n{traceback.format_exc()}")
     print(f"\nError: {e}")
-    print("\nFull error details have been saved to calculator_debug.log")
+    print("\nFull error details have been saved to logs/calculator_debug.log")
     sys.exit(1)

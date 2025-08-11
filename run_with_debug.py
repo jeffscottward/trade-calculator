@@ -10,7 +10,9 @@ import logging
 from datetime import datetime
 
 # Set up detailed logging
-log_filename = f'debug_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log'
+import os
+os.makedirs('logs', exist_ok=True)
+log_filename = f'logs/debug_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log'
 logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s [%(levelname)s] %(filename)s:%(lineno)d - %(message)s',

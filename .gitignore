@@ -37,10 +37,9 @@ ENV/
 .DS_Store
 
 # Project specific
+logs/
 *.log
-debug_*.log
 calculator_output.txt
-calculator_debug.log
 
 # Cache
 .cache/
