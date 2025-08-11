@@ -37,6 +37,10 @@ python automation/earnings_scanner.py
 # Trade executor (handles IB order placement)
 python automation/trade_executor.py
 
+# IB Client Portal API Server (runs on port 5001)
+# Note: Configured to run on port 5001 instead of default 5000
+python automation/ib_client_portal_server.py
+
 # Debug mode
 python scripts/run_with_debug.py
 ```
@@ -98,6 +102,8 @@ Uses PostgreSQL-specific features: SERIAL ids, TIMESTAMP WITH TIME ZONE, trigger
 **Alpha Vantage**: Earnings calendar (500 calls/day free tier)
 **Yahoo Finance**: Real-time options chains and volatility
 **Interactive Brokers**: Order execution and market data backup
+**IB Client Portal API**: REST API for account data and trading (port 5001)
+  - Documentation: https://www.interactivebrokers.com/campus/ibkr-api-page/cpapi-v1/#introduction
 
 ## Development Workflow
 
