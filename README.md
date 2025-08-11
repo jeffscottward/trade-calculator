@@ -54,14 +54,17 @@ To test Yahoo Finance connection:
 python scripts/test_yfinance.py
 ```
 
-### Running the IB Client Portal API Server
+### Running the IB Client Portal Gateway
 
 ```bash
-# Start the IB Client Portal API server on port 5001
-python automation/ib_client_portal_server.py
+# Start the IB Client Portal Gateway on port 5001
+cd clientportal.gw/bin
+./run.sh  # On macOS/Linux
+# OR
+run.bat   # On Windows
 ```
 
-Note: The server is configured to run on port 5001 instead of the default 5000.
+Note: The gateway is configured to run on port 5001 instead of the default 5000.
 
 ## 📚 Documentation
 
@@ -162,7 +165,11 @@ trade-calculator/
 │   ├── earnings_scanner.py   # Daily earnings event scanner
 │   ├── trade_executor.py     # IB order execution
 │   ├── position_manager.py   # Entry/exit automation
-│   ├── risk_monitor.py       # Risk management system
-│   └── ib_client_portal_server.py # IB Client Portal API server (port 5001)
+│   └── risk_monitor.py       # Risk management system
+├── clientportal.gw/           # IB Client Portal Gateway (port 5001)
+│   ├── bin/                   # Executable scripts
+│   │   ├── run.sh            # macOS/Linux startup script
+│   │   └── run.bat           # Windows startup script
+│   └── root/                  # Configuration files
 └── logs/                      # Debug logs (gitignored)
 ```

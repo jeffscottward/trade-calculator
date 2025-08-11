@@ -37,9 +37,10 @@ python automation/earnings_scanner.py
 # Trade executor (handles IB order placement)
 python automation/trade_executor.py
 
-# IB Client Portal API Server (runs on port 5001)
+# IB Client Portal Gateway (runs on port 5001)
 # Note: Configured to run on port 5001 instead of default 5000
-python automation/ib_client_portal_server.py
+# Run from the clientportal.gw directory
+cd clientportal.gw/bin && ./run.sh  # On Windows: run.bat
 
 # Debug mode
 python scripts/run_with_debug.py
