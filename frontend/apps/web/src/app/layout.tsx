@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-	title: "t-stack-base",
-	description: "t-stack-base",
+	title: "EVOL Optimus",
+	description: "Earnings Volatility Options Trading System",
 };
 
 export default function RootLayout({

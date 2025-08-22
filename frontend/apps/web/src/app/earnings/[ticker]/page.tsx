@@ -47,6 +47,11 @@ export default function StockDetailPage() {
   const [stockDetails, setStockDetails] = useState<StockDetails | null>(null)
   const [analysis, setAnalysis] = useState<TradeAnalysis | null>(null)
   const [loading, setLoading] = useState(true)
+  
+  // Update page title with ticker
+  useEffect(() => {
+    document.title = `${ticker} - EVOL Optimus`
+  }, [ticker])
 
   // Fetch all data in a single call
   useEffect(() => {
