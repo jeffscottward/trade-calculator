@@ -242,6 +242,9 @@ async def get_earnings_by_date(date_str: str, include_analysis: bool = False, fo
         include_analysis: Include trading analysis for each stock
         force_fetch: Force refresh from API even if cached (for cron jobs)
     """
+    import sys
+    import os
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     from database_operations import get_cached_earnings_for_date, fetch_and_store_earnings_for_date, check_date_has_data
     
     logger.info(f"=== EARNINGS REQUEST for {date_str} ===")

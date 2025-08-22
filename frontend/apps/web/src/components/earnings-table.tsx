@@ -78,6 +78,7 @@ export function EarningsTable({ data }: EarningsTableProps) {
   ])
   const [searchQuery, setSearchQuery] = useState('')
   const [columnFilters, setColumnFilters] = useState<any[]>([])
+  const [epsSort, setEpsSort] = useState<'desc' | 'asc' | null>(null)
   
   
   const columnHelper = createColumnHelper<EarningsData>()
@@ -112,9 +113,23 @@ export function EarningsTable({ data }: EarningsTableProps) {
   )
 
   const filteredData = useMemo(() => {
-    if (!searchQuery) return normalizedData
-    return fuse.search(searchQuery).map((result) => result.item)
-  }, [searchQuery, fuse, normalizedData])
+    let result = normalizedData
+    
+    // Apply search filter
+    if (searchQuery) {
+      result = fuse.search(searchQuery).map((result) => result.item)
+    }
+    
+    // Filter out nulls when EPS sorting is active
+    if (epsSort !== null) {
+      result = result.filter(item => {
+        const estimate = item.estimate || item.eps_forecast
+        return estimate && estimate !== '-'
+      })
+    }
+    
+    return result
+  }, [searchQuery, fuse, normalizedData, epsSort])
 
   const columns = useMemo(() => {
     return [
@@ -123,7 +138,8 @@ export function EarningsTable({ data }: EarningsTableProps) {
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-            className="h-auto p-1 -m-1"
+            className="h-auto !px-0 py-0 font-medium text-sm justify-start w-full"
+            style={{ padding: '0' }}
           >
             Ticker
             <ArrowUpDown className="ml-1 h-3 w-3" />
@@ -146,16 +162,28 @@ export function EarningsTable({ data }: EarningsTableProps) {
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-            className="h-auto p-1 -m-1 justify-start"
+            className="h-auto !px-0 py-0 font-medium text-sm justify-start text-left w-full"
+            style={{ padding: '0' }}
           >
             Company
             <ArrowUpDown className="ml-1 h-3 w-3" />
           </Button>
         ),
+        size: 350,
+        minSize: 300,
+        maxSize: 400,
       }),
     columnHelper.accessor('reportTime', {
-      header: () => (
-        <div className="font-medium text-sm">Report Time</div>
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          className="h-auto !px-0 py-0 font-medium text-sm justify-start text-left w-full"
+          style={{ padding: '0' }}
+        >
+          Report Time
+          <ArrowUpDown className="ml-1 h-3 w-3" />
+        </Button>
       ),
       cell: (info) => {
         const time = info.getValue() as string
@@ -177,23 +205,55 @@ export function EarningsTable({ data }: EarningsTableProps) {
           </span>
         )
       },
+      sortingFn: (rowA, rowB) => {
+        const order = { 'BMO': 0, 'AMC': 1, 'DMH': 2, 'TBD': 3 }
+        const a = order[rowA.getValue('reportTime')] ?? 4
+        const b = order[rowB.getValue('reportTime')] ?? 4
+        return a - b
+      },
+      size: 120,
+      minSize: 100,
+      maxSize: 140,
     }),
     columnHelper.accessor('marketCap', {
       header: ({ column }) => (
-        <div className="flex flex-col gap-1">
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-            className="h-auto p-1 -m-1"
-          >
-            Market Cap
-            <ArrowUpDown className="ml-1 h-3 w-3" />
-          </Button>
-        </div>
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          className="h-auto !px-0 py-0 font-medium text-sm justify-end text-right w-full"
+          style={{ padding: '0' }}
+        >
+          Market Cap
+          <ArrowUpDown className="ml-1 h-3 w-3" />
+        </Button>
       ),
       cell: (info) => {
-        const value = info.getValue()
-        return <span className="font-medium">{value || '-'}</span>
+        const value = info.getValue() as string
+        if (!value || value === '-') {
+          return <div className="text-right text-muted-foreground">-</div>
+        }
+        
+        // Determine the suffix and apply color coding
+        const isTrillions = value.includes('T')
+        const isBillions = value.includes('B')
+        const isMillions = value.includes('M')
+        const isThousands = value.includes('K')
+        
+        return (
+          <div className="text-right font-medium">
+            <span 
+              className={
+                isBillions ? 'text-lime-500 dark:text-lime-400 font-semibold' :
+                isMillions ? 'text-green-600 dark:text-green-500' :
+                isThousands ? 'text-gray-500 dark:text-gray-400 text-sm' :
+                ''
+              }
+              style={isTrillions ? { color: '#00ff00', fontWeight: 'bold' } : undefined}
+            >
+              {value}
+            </span>
+          </div>
+        )
       },
       sortingFn: (rowA, rowB) => {
         const a = rowA.original.marketCapRaw
@@ -205,13 +265,17 @@ export function EarningsTable({ data }: EarningsTableProps) {
         const numB = typeof b === 'string' ? parseFloat(b.replace(/[$,]/g, '')) : b
         return numA - numB
       },
+      size: 110,
+      minSize: 90,
+      maxSize: 130,
     }),
     columnHelper.accessor('recommendation', {
       header: ({ column }) => (
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-          className="h-auto p-1 -m-1"
+          className="h-auto !px-0 py-0 font-medium text-sm justify-start text-left w-full"
+          style={{ padding: '0' }}
         >
           Recommendation
           <ArrowUpDown className="ml-1 h-3 w-3" />
@@ -225,7 +289,8 @@ export function EarningsTable({ data }: EarningsTableProps) {
         const displayRec = rec === 'WAIT' ? 'AVOID' : rec
         
         return (
-          <span className={`inline-block px-2 py-1 rounded text-xs font-bold ${
+          <div className="flex justify-start">
+            <span className={`inline-block px-2 py-1 rounded text-xs font-bold ${
             displayRec === 'RECOMMENDED' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
             displayRec === 'CONSIDER' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
             displayRec === 'AVOID' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
@@ -233,6 +298,7 @@ export function EarningsTable({ data }: EarningsTableProps) {
           }`}>
             {displayRec}
           </span>
+          </div>
         )
       },
       sortingFn: (rowA, rowB) => {
@@ -241,14 +307,40 @@ export function EarningsTable({ data }: EarningsTableProps) {
         const b = order[rowB.getValue('recommendation')] ?? 3
         return a - b
       },
+      size: 140,
+      minSize: 120,
+      maxSize: 160,
     }),
     columnHelper.accessor('estimate', {
-      header: () => (
-        <div className="font-medium text-sm">EPS Estimate</div>
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => {
+            // Three-state cycle: desc → asc → null → desc
+            if (epsSort === null) {
+              setEpsSort('desc')
+              setSorting([{ id: 'estimate', desc: true }])
+            } else if (epsSort === 'desc') {
+              setEpsSort('asc')
+              setSorting([{ id: 'estimate', desc: false }])
+            } else {
+              setEpsSort(null)
+              setSorting(prev => prev.filter(s => s.id !== 'estimate'))
+            }
+          }}
+          className="h-auto !px-0 py-0 font-medium text-sm justify-end text-right w-full"
+          style={{ padding: '0' }}
+        >
+          EPS Est.
+          <ArrowUpDown className="ml-1 h-3 w-3" />
+        </Button>
       ),
+      size: 80,
+      minSize: 70,
+      maxSize: 100,
       cell: (info) => {
-        const value = info.getValue()
-        if (!value) return <span className="text-muted-foreground">-</span>
+        const value = info.getValue() as string | undefined
+        if (!value || value === '-') return <div className="text-right text-muted-foreground">-</div>
         
         // Check if it's a negative value (has parentheses)
         const isNegative = value.includes('(')
@@ -260,14 +352,34 @@ export function EarningsTable({ data }: EarningsTableProps) {
         const formattedValue = isNegative ? `-$${cleanValue}` : `+$${cleanValue}`
         
         return (
-          <span className={isNegative ? 'text-red-600 dark:text-red-400 font-medium' : 'text-green-600 dark:text-green-400 font-medium'}>
-            {formattedValue}
-          </span>
+          <div className="text-right">
+            <span className={isNegative ? 'text-red-600 dark:text-red-400 font-medium' : 'text-green-600 dark:text-green-400 font-medium'}>
+              {formattedValue}
+            </span>
+          </div>
         )
+      },
+      sortingFn: (rowA, rowB, columnId) => {
+        const a = rowA.getValue('estimate') as string | undefined
+        const b = rowB.getValue('estimate') as string | undefined
+        
+        // Since nulls are filtered out when sorting is active,
+        // we can simplify this to just parse and compare
+        if (!a && !b) return 0
+        if (!a) return 1
+        if (!b) return -1
+        
+        const aIsNegative = a.includes('(')
+        const aNum = parseFloat(a.replace(/[()$]/g, '')) * (aIsNegative ? -1 : 1)
+        
+        const bIsNegative = b.includes('(')
+        const bNum = parseFloat(b.replace(/[()$]/g, '')) * (bIsNegative ? -1 : 1)
+        
+        return aNum - bNum
       },
     }),
     ]
-  }, [columnHelper])
+  }, [columnHelper, epsSort])
 
   const table = useReactTable({
     data: filteredData,
@@ -281,6 +393,8 @@ export function EarningsTable({ data }: EarningsTableProps) {
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    sortDescFirst: false,
+    enableSortingRemoval: true,
   })
 
   return (
@@ -302,13 +416,20 @@ export function EarningsTable({ data }: EarningsTableProps) {
           <thead>
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id} className="border-b">
-                {headerGroup.headers.map((header) => (
-                  <th key={header.id} className="px-2 py-2 text-left" style={{ width: header.getSize() }}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
-                  </th>
-                ))}
+                {headerGroup.headers.map((header) => {
+                  const colId = header.column.id
+                  const alignment = 
+                    colId === 'marketCap' || colId === 'estimate' ? 'text-right' :
+                    'text-left'
+                  return (
+                    <th key={header.id} className={`px-3 py-2 ${alignment}`}
+                        style={{ width: header.column.getSize() }}>
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(header.column.columnDef.header, header.getContext())}
+                    </th>
+                  )
+                })}
               </tr>
             ))}
           </thead>
@@ -316,11 +437,18 @@ export function EarningsTable({ data }: EarningsTableProps) {
             {table.getRowModel().rows.length ? (
               table.getRowModel().rows.map((row) => (
                 <tr key={row.id} className="border-b hover:bg-muted/50">
-                  {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="px-2 py-2">
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </td>
-                  ))}
+                  {row.getVisibleCells().map((cell) => {
+                    const colId = cell.column.id
+                    const alignment = 
+                      colId === 'marketCap' || colId === 'estimate' ? '' :
+                      ''
+                    return (
+                      <td key={cell.id} className={`px-3 py-2 ${alignment}`}
+                          style={{ width: cell.column.getSize() }}>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </td>
+                    )
+                  })}
                 </tr>
               ))
             ) : (
