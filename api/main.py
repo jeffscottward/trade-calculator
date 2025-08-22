@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from datetime import datetime, date, timedelta
@@ -43,6 +43,29 @@ earnings_cache = {}
 cache_timestamp = None
 CACHE_DURATION = timedelta(minutes=5)  # Cache for 5 minutes
 
+# WebSocket connection manager for progress updates
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)
+
+    async def send_progress(self, message: dict):
+        # Send progress to all connected clients
+        for connection in self.active_connections:
+            try:
+                await connection.send_json(message)
+            except:
+                # Connection might be closed
+                pass
+
+manager = ConnectionManager()
+
 def get_db_connection():
     """Get database connection"""
     if not DATABASE_URL:
@@ -61,6 +84,16 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
+
+@app.websocket("/ws/progress")
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            # Keep connection alive
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
 
 async def fetch_earnings_from_api(date_str: str) -> List[Dict]:
     """Fetch earnings data from NASDAQ for a specific date (free, no API key)"""
@@ -123,13 +156,25 @@ async def fetch_earnings_from_api(date_str: str) -> List[Dict]:
         logger.error(f"Error fetching earnings from NASDAQ: {e}")
         return []
 
-async def analyze_earnings_list(earnings_list: List[Dict]) -> List[Dict]:
+async def analyze_earnings_list(earnings_list: List[Dict], date_str: str = None) -> List[Dict]:
     """Analyze a list of earnings with trading recommendations"""
     analyzed = []
+    total_stocks = len(earnings_list)
     
-    for earning in earnings_list:
+    for idx, earning in enumerate(earnings_list):
         ticker = earning.get('ticker', '')
         if ticker:
+            # Send progress update via WebSocket
+            progress_data = {
+                "type": "analysis_progress",
+                "date": date_str,
+                "current": idx + 1,
+                "total": total_stocks,
+                "ticker": ticker,
+                "percentage": int(((idx + 1) / total_stocks) * 100)
+            }
+            await manager.send_progress(progress_data)
+            
             # Get analysis
             analysis = await get_quick_analysis(ticker)
             
@@ -154,6 +199,13 @@ async def analyze_earnings_list(earnings_list: List[Dict]) -> List[Dict]:
                 earning['criteria_met'] = {}
         
         analyzed.append(earning)
+    
+    # Send completion message
+    await manager.send_progress({
+        "type": "analysis_complete",
+        "date": date_str,
+        "total": total_stocks
+    })
     
     return analyzed
 

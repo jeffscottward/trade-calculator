@@ -185,7 +185,7 @@ async def fetch_and_store_earnings_for_date(date_str: str, force_refresh: bool =
         
         # Analyze each stock
         logger.info(f"Starting analysis for {len(earnings_data)} stocks...")
-        analyzed_data = await analyze_earnings_list(earnings_data)
+        analyzed_data = await analyze_earnings_list(earnings_data, date_str)
         logger.info(f"Analysis complete for {date_str}")
         
         # Store in database

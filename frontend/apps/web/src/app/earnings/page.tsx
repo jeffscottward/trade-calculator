@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { format } from 'date-fns'
 import { EarningsCalendar } from '@/components/earnings-calendar'
 import { EarningsTable, EarningsData } from '@/components/earnings-table'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Progress } from '@/components/ui/progress'
 import { toast } from 'sonner'
 
 // Removed mock data - only using real data from API/database
@@ -16,6 +17,50 @@ export default function EarningsPage() {
   const [loading, setLoading] = useState(true)
   const [earningsDates, setEarningsDates] = useState<Date[]>([])
   const [isFetching, setIsFetching] = useState(false)
+  const [analysisProgress, setAnalysisProgress] = useState<{
+    current: number
+    total: number
+    ticker: string
+    percentage: number
+  } | null>(null)
+  const wsRef = useRef<WebSocket | null>(null)
+
+  // Setup WebSocket connection for progress tracking
+  useEffect(() => {
+    const ws = new WebSocket('ws://localhost:8000/ws/progress')
+    
+    ws.onopen = () => {
+      console.log('🚀 ~ file: page.tsx:34 → WebSocket connected')
+    }
+    
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data)
+      console.log('🚀 ~ file: page.tsx:38 → WebSocket message:', data)
+      
+      if (data.type === 'analysis_progress') {
+        setAnalysisProgress({
+          current: data.current,
+          total: data.total,
+          ticker: data.ticker,
+          percentage: data.percentage
+        })
+      } else if (data.type === 'analysis_complete') {
+        setAnalysisProgress(null)
+      }
+    }
+    
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error)
+    }
+    
+    wsRef.current = ws
+    
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close()
+      }
+    }
+  }, [])
 
   // Get all dates that have earnings (for calendar highlighting)
   useEffect(() => {
@@ -208,7 +253,19 @@ export default function EarningsPage() {
                   <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
                 </div>
                 <p className="text-lg text-foreground mt-4">Loading earnings data...</p>
-                <p className="text-sm text-muted-foreground">Fetching and analyzing stocks</p>
+                {analysisProgress ? (
+                  <div className="mt-4 w-64 space-y-2">
+                    <p className="text-sm text-muted-foreground text-center">
+                      Analyzing {analysisProgress.ticker} ({analysisProgress.current}/{analysisProgress.total})
+                    </p>
+                    <Progress value={analysisProgress.percentage} className="h-2" />
+                    <p className="text-xs text-muted-foreground text-center">
+                      {analysisProgress.percentage}% complete
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Fetching and analyzing stocks</p>
+                )}
               </div>
             </div>
           ) : (
