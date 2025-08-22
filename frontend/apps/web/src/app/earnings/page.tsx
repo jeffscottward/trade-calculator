@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Progress } from '@/components/ui/progress'
 import { toast } from 'sonner'
 import { useEarningsQuery, usePrefetchEarnings } from '@/hooks/useEarnings'
+import { StockNewsFeed } from '@/components/stock-news-feed'
 
 // Removed mock data - only using real data from API/database
 
@@ -271,6 +272,11 @@ export default function EarningsPage() {
               )}
             </CardContent>
           </Card>
+        </div>
+
+        {/* Stock News Feed */}
+        <div className="flex-1">
+          <StockNewsFeed />
         </div>
       </div>
 
