@@ -195,7 +195,7 @@ export default function StockDetailPage() {
               {loading ? 'Loading...' : (analysis?.data?.position_size || '6%')}
             </div>
             <p className="text-xs text-muted-foreground">
-              Of portfolio (Kelly criterion)
+              of portfolio (Kelly criterion)
             </p>
           </CardContent>
         </Card>

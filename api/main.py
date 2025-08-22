@@ -659,10 +659,15 @@ async def get_stock_complete(ticker: str):
             if expected_move is None:
                 expected_move = f"{current_price * 0.05:.1f}%" if current_price else "N/A"
             
+            # Calculate IV rank (simplified - would need historical IV data for accurate calculation)
+            # This maps IV from 15% (low) to 60% (high) to a 0-100 scale
+            front_iv = result.get('front_iv', 0.35)
+            iv_rank = min(100, max(0, int((front_iv - 0.15) / (0.60 - 0.15) * 100)))
+            
             analysis_data = {
-                "current_iv": f"{result.get('front_iv', 0.35) * 100:.1f}%",
+                "current_iv": f"{front_iv * 100:.1f}%",
                 "historical_iv": f"{historical_vol * 100:.1f}%",
-                "iv_rank": result.get('iv_rank', 50),
+                "iv_rank": iv_rank,
                 "suggested_strategy": result.get('strategy', 'Calendar Spread'),
                 "expected_move": expected_move,
                 "recommendation": recommendation,
