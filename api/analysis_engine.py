@@ -201,12 +201,60 @@ def compute_recommendation(ticker_str):
         expected_move = str(round(straddle / underlying_price * 100, 2)) + "%" if straddle else None
 
         return {
+            # Boolean criteria (for qualification)
             'avg_volume': avg_volume >= 1500000, 
             'iv30_rv30': iv30_rv30 >= 1.25, 
             'ts_slope_0_45': ts_slope_0_45 <= -0.00406, 
+            
+            # Raw values (for ranking)
+            'avg_volume_raw': avg_volume,
+            'iv_rv_ratio_raw': iv30_rv30, 
+            'term_structure_slope_raw': ts_slope_0_45,
+            
+            # Other data
             'expected_move': expected_move,
             'underlying_price': underlying_price,
             'front_iv': atm_iv.get(exp_dates[0]) if exp_dates else None
         }
     except Exception as e:
         return {"error": str(e)}
+
+def calculate_priority_score(result):
+    """
+    Calculate priority score for ranking RECOMMENDED trades
+    
+    Formula: (IV/RV Ratio × |Term Structure Slope| × Volume Factor) × 100
+    
+    Args:
+        result: Analysis result dict with raw values
+        
+    Returns:
+        float: Priority score (higher = better opportunity)
+    """
+    try:
+        # Extract raw values
+        iv_rv_ratio = result.get('iv_rv_ratio_raw', 1.0)
+        term_slope = result.get('term_structure_slope_raw', 0.0)
+        avg_volume = result.get('avg_volume_raw', 1000000)
+        
+        # Volume factor (1.0 = 1M volume, 2.0 = 2M volume, etc.)
+        volume_factor = min(avg_volume / 1000000, 10.0)  # Cap at 10x
+        
+        # Only calculate for qualifying trades
+        if not all([
+            result.get('avg_volume', False),
+            result.get('iv30_rv30', False), 
+            result.get('ts_slope_0_45', False)
+        ]):
+            return 0.0
+            
+        # Calculate priority score
+        score = (iv_rv_ratio * abs(term_slope) * volume_factor) * 100
+        
+        return round(score, 2)
+        
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"Error calculating priority score: {e}")
+        return 0.0

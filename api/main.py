@@ -1,12 +1,13 @@
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from datetime import datetime, date, timedelta
-from typing import List, Optional, Dict, AsyncGenerator
+from typing import List, Optional, Dict, AsyncGenerator, Any
 import os
 from dotenv import load_dotenv
 import requests
 import json
+from decimal import Decimal
 # CSV imports removed - using JSON API from NASDAQ
 from collections import defaultdict
 import psycopg2
@@ -43,43 +44,29 @@ earnings_cache = {}
 cache_timestamp = None
 CACHE_DURATION = timedelta(minutes=5)  # Cache for 5 minutes
 
-# WebSocket connection manager for progress updates
-class ConnectionManager:
-    def __init__(self):
-        self.active_connections: List[WebSocket] = []
+# WebSocket removed in favor of SSE
 
-    async def connect(self, websocket: WebSocket):
-        logger.info("ConnectionManager.connect called")
-        await websocket.accept()
-        self.active_connections.append(websocket)
-        logger.info(f"WebSocket added to active_connections. Count: {len(self.active_connections)}")
+def json_serial(obj: Any) -> Any:
+    """JSON serializer for objects not serializable by default json code"""
+    if isinstance(obj, Decimal):
+        result = float(obj)
+        # Handle NaN and Infinity
+        import math
+        if math.isnan(result) or math.isinf(result):
+            return None
+        return result
+    elif isinstance(obj, (datetime, date)):
+        return obj.isoformat()
+    elif isinstance(obj, float):
+        import math
+        if math.isnan(obj) or math.isinf(obj):
+            return None
+        return obj
+    raise TypeError(f"Type {type(obj)} not serializable")
 
-    def disconnect(self, websocket: WebSocket):
-        self.active_connections.remove(websocket)
-
-    async def send_progress(self, message: dict):
-        # Send progress to all connected clients
-        if len(self.active_connections) == 0:
-            logger.debug(f"No active connections to send progress for {message.get('ticker', 'unknown')}")
-            return
-            
-        logger.info(f"Sending progress to {len(self.active_connections)} clients: {message.get('ticker', 'unknown')}")
-        disconnected = []
-        for connection in self.active_connections:
-            try:
-                await connection.send_json(message)
-                logger.info(f"Successfully sent progress message for {message.get('ticker', 'unknown')}")
-            except Exception as e:
-                # Connection might be closed
-                logger.error(f"Failed to send progress: {e}")
-                disconnected.append(connection)
-        
-        # Remove disconnected clients
-        for conn in disconnected:
-            if conn in self.active_connections:
-                self.active_connections.remove(conn)
-
-manager = ConnectionManager()
+def safe_json_dumps(data: Any) -> str:
+    """Safely dump data to JSON, handling Decimal and datetime types"""
+    return json.dumps(data, default=json_serial)
 
 def get_db_connection():
     """Get database connection"""
@@ -100,24 +87,7 @@ async def root():
 async def health_check():
     return {"status": "healthy"}
 
-@app.websocket("/ws/progress")
-async def websocket_endpoint(websocket: WebSocket):
-    logger.info("WebSocket connection attempt received")
-    await manager.connect(websocket)
-    logger.info(f"WebSocket connected. Total active connections: {len(manager.active_connections)}")
-    
-    try:
-        while True:
-            # Keep connection alive
-            data = await websocket.receive_text()
-            logger.info(f"Received WebSocket message: {data}")
-    except WebSocketDisconnect:
-        logger.info("WebSocket disconnected")
-        manager.disconnect(websocket)
-        logger.info(f"After disconnect. Total active connections: {len(manager.active_connections)}")
-    except Exception as e:
-        logger.error(f"WebSocket error: {e}")
-        manager.disconnect(websocket)
+# WebSocket endpoint removed in favor of SSE
 
 async def fetch_earnings_from_api(date_str: str) -> List[Dict]:
     """Fetch earnings data from NASDAQ for a specific date (free, no API key)"""
@@ -188,16 +158,7 @@ async def analyze_earnings_list(earnings_list: List[Dict], date_str: str = None)
     for idx, earning in enumerate(earnings_list):
         ticker = earning.get('ticker', '')
         if ticker:
-            # Send progress update via WebSocket
-            progress_data = {
-                "type": "analysis_progress",
-                "date": date_str,
-                "current": idx + 1,
-                "total": total_stocks,
-                "ticker": ticker,
-                "percentage": int(((idx + 1) / total_stocks) * 100)
-            }
-            await manager.send_progress(progress_data)
+            # Progress is now sent via SSE in the streaming endpoint
             
             # Get analysis
             analysis = await get_quick_analysis(ticker)
@@ -224,12 +185,7 @@ async def analyze_earnings_list(earnings_list: List[Dict], date_str: str = None)
         
         analyzed.append(earning)
     
-    # Send completion message
-    await manager.send_progress({
-        "type": "analysis_complete",
-        "date": date_str,
-        "total": total_stocks
-    })
+    # Completion is now handled via SSE in the streaming endpoint
     
     return analyzed
 
@@ -321,7 +277,7 @@ async def get_earnings_by_date(date_str: str, include_analysis: bool = False, fo
     import sys
     import os
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-    from database_operations import get_cached_earnings_for_date, fetch_and_store_earnings_for_date, check_date_has_data
+    from database_operations import get_cached_earnings_for_date, fetch_and_store_earnings_for_date, check_date_has_data, store_earnings_with_analysis
     
     logger.info(f"=== EARNINGS REQUEST for {date_str} ===")
     logger.info(f"Include analysis: {include_analysis}, Force fetch: {force_fetch}")
@@ -991,92 +947,125 @@ async def analyze_trade(ticker: str):
             }
         }
 
-@app.get("/api/earnings-progress/{date}")
-async def earnings_progress_stream(date: str):
+@app.get("/api/earnings/{date_str}/stream")
+async def earnings_stream_with_analysis(date_str: str):
     """
-    Server-Sent Events endpoint for real-time progress updates when fetching earnings data
+    Server-Sent Events endpoint for real-time earnings data with analysis progress
+    Combines fetching and analysis in a single streaming response
     """
+    # Import database function at endpoint level
+    import sys
+    import os
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from database_operations import store_earnings_with_analysis
+    
     async def generate() -> AsyncGenerator[str, None]:
         try:
-            # Parse the date
-            earnings_date = datetime.strptime(date, "%Y-%m-%d").date()
+            # Temporarily disable cache to always fetch fresh data
+            # TODO: Re-implement proper cache invalidation logic
+            cached_data = None
             
-            # First, get the list of tickers for this date from NASDAQ
-            logger.info(f"Fetching earnings from NASDAQ for {date}")
+            # No cached data, need to fetch and analyze
+            yield f"data: {safe_json_dumps({'type': 'start', 'message': 'Fetching earnings data...'})}\n\n"
             
-            # Send initial message
-            yield f"data: {json.dumps({'type': 'start', 'message': 'Fetching earnings data...'})}\n\n"
-            await asyncio.sleep(0.1)
+            # Fetch earnings from NASDAQ
+            earnings_list = await fetch_earnings_from_api(date_str)
             
-            # Fetch from NASDAQ API
-            nasdaq_url = f"https://api.nasdaq.com/api/calendar/earnings"
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                'Accept': 'application/json',
-            }
-            params = {'date': date}
-            
-            response = requests.get(nasdaq_url, headers=headers, params=params)
-            
-            if response.status_code != 200:
-                yield f"data: {json.dumps({'type': 'error', 'message': 'Failed to fetch data from NASDAQ'})}\n\n"
+            if not earnings_list:
+                yield f"data: {safe_json_dumps({'type': 'complete', 'earnings': [], 'source': 'fresh_fetch'})}\n\n"
                 return
             
-            data = response.json()
-            rows = data.get('data', {}).get('rows', [])
-            total_stocks = len(rows)
+            total_stocks = len(earnings_list)
+            yield f"data: {safe_json_dumps({'type': 'fetched', 'total': total_stocks, 'message': f'Analyzing {total_stocks} stocks...'})}\n\n"
             
-            if total_stocks == 0:
-                yield f"data: {json.dumps({'type': 'complete', 'total': 0, 'scanned': 0, 'earnings': []})}\n\n"
-                return
+            # Analyze each stock and send progress
+            analyzed_earnings = []
             
-            # Send total count
-            yield f"data: {json.dumps({'type': 'total', 'total': total_stocks})}\n\n"
-            await asyncio.sleep(0.1)
-            
-            # Process stocks in batches for progress updates
-            batch_size = 10
-            processed_stocks = []
-            
-            for i in range(0, total_stocks, batch_size):
-                batch = rows[i:i+batch_size]
-                
-                for stock in batch:
-                    # Process each stock (store in DB if needed)
-                    processed_stocks.append({
-                        "ticker": stock.get("symbol", ""),
-                        "companyName": stock.get("name", ""),
-                        "reportTime": stock.get("time", "TBD"),
-                        "marketCap": stock.get("marketCap", "N/A"),
-                        "estimate": stock.get("epsForecast", "N/A"),
-                    })
+            for idx, earning in enumerate(earnings_list):
+                ticker = earning.get('ticker', '')
                 
                 # Send progress update
-                scanned = min(i + batch_size, total_stocks)
-                yield f"data: {json.dumps({
-                    'type': 'progress', 
-                    'scanned': scanned, 
+                yield f"data: {safe_json_dumps({
+                    'type': 'progress',
+                    'current': idx + 1,
                     'total': total_stocks,
-                    'percentage': round((scanned / total_stocks) * 100, 1)
+                    'ticker': ticker,
+                    'percentage': int(((idx + 1) / total_stocks) * 100),
+                    'message': f'Analyzing {ticker}...'
                 })}\n\n"
                 
-                # Small delay to simulate processing and prevent overwhelming the client
-                await asyncio.sleep(0.2)
+                if ticker:
+                    # Get analysis
+                    logger.info(f"Starting analysis for {ticker}")
+                    analysis = await get_quick_analysis(ticker)
+                    
+                    # Merge analysis with earnings data
+                    earning['recommendation'] = analysis.get('recommendation', 'AVOID')
+                    earning['riskLevel'] = analysis.get('riskLevel', 'HIGH')
+                    
+                    # Get full analysis for more details
+                    try:
+                        full_analysis = await analyze_trade(ticker)
+                        if full_analysis and 'data' in full_analysis:
+                            earning['expected_move'] = full_analysis['data'].get('expected_move')
+                            earning['position_size'] = full_analysis['data'].get('position_size', '0%')
+                            earning['iv_rank'] = full_analysis['data'].get('iv_rank')
+                            earning['criteria_met'] = full_analysis['data'].get('criteria_met', {})
+                            
+                            # Extract market cap if available
+                            if 'market_cap' in full_analysis['data']:
+                                earning['market_cap_numeric'] = full_analysis['data']['market_cap']
+                            
+                            # Calculate priority score for RECOMMENDED trades
+                            if earning.get('recommendation') == 'RECOMMENDED':
+                                try:
+                                    from analysis_engine import calculate_priority_score
+                                    # Get the raw analysis data for scoring
+                                    raw_analysis = await get_quick_analysis(ticker) 
+                                    if raw_analysis and not raw_analysis.get('error'):
+                                        priority_score = calculate_priority_score(raw_analysis)
+                                        earning['priority_score'] = priority_score
+                                        logger.info(f"Priority score for {ticker}: {priority_score}")
+                                    else:
+                                        earning['priority_score'] = 0.0
+                                except Exception as score_error:
+                                    logger.warning(f"Priority score calculation failed for {ticker}: {score_error}")
+                                    earning['priority_score'] = 0.0
+                            else:
+                                earning['priority_score'] = 0.0
+                    except Exception as e:
+                        logger.warning(f"Analysis warning for {ticker}: {e}")
+                        earning['criteria_met'] = {}
+                
+                analyzed_earnings.append(earning)
+                
+                # Small delay to prevent overwhelming
+                if idx < total_stocks - 1:  # Don't delay after last item
+                    await asyncio.sleep(0.05)
             
-            # Send completion with all earnings data
-            yield f"data: {json.dumps({
-                'type': 'complete', 
-                'total': total_stocks, 
-                'scanned': total_stocks,
-                'earnings': processed_stocks
+            # Store in database
+            try:
+                from database_operations import store_earnings_with_analysis
+                await store_earnings_with_analysis(date_str, analyzed_earnings)
+                logger.info(f"Successfully stored {len(analyzed_earnings)} earnings for {date_str}")
+            except Exception as store_error:
+                logger.error(f"Failed to store earnings data: {store_error}")
+                # Continue with response even if storage fails
+            
+            # Send complete event with all analyzed data
+            yield f"data: {safe_json_dumps({
+                'type': 'complete',
+                'earnings': analyzed_earnings,
+                'source': 'fresh_fetch',
+                'total': total_stocks
             })}\n\n"
             
         except Exception as e:
             logger.error(f"Error in SSE stream: {e}")
-            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+            yield f"data: {safe_json_dumps({'type': 'error', 'message': str(e)})}\n\n"
     
     return StreamingResponse(
-        generate(),
+        generate(), 
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

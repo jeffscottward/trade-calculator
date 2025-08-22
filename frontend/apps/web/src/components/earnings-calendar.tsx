@@ -7,9 +7,10 @@ import { format, startOfDay } from 'date-fns'
 interface EarningsCalendarProps {
   onDateSelect: (date: Date) => void
   earningsDates?: Date[]
+  maxDate?: Date
 }
 
-export function EarningsCalendar({ onDateSelect, earningsDates = [] }: EarningsCalendarProps) {
+export function EarningsCalendar({ onDateSelect, earningsDates = [], maxDate }: EarningsCalendarProps) {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
 
   useEffect(() => {
@@ -42,11 +43,12 @@ export function EarningsCalendar({ onDateSelect, earningsDates = [] }: EarningsC
   // Get today's date at start of day for comparison
   const today = startOfDay(new Date())
   
-  // Disable past dates and weekends
+  // Disable past dates, weekends, and dates beyond API cutoff
   const isDateDisabled = (date: Date) => {
     const isPastDate = date < today
     const isWeekend = date.getDay() === 0 || date.getDay() === 6  // Sunday = 0, Saturday = 6
-    return isPastDate || isWeekend
+    const isBeyondApiRange = maxDate && date > maxDate
+    return isPastDate || isWeekend || isBeyondApiRange
   }
   
   return (
@@ -57,7 +59,7 @@ export function EarningsCalendar({ onDateSelect, earningsDates = [] }: EarningsC
       modifiers={modifiers}
       modifiersStyles={modifiersStyles}
       disabled={isDateDisabled}
-      className="rounded-md border w-full"
+      className="rounded-md border w-full [&_td]:h-16 [&_tbody_button]:h-14 [&_tbody_button]:w-full [&_tbody_button]:text-base [&_tbody_button]:font-medium [&_.rdp-button_previous]:!h-10 [&_.rdp-button_previous]:!w-10 [&_.rdp-button_next]:!h-10 [&_.rdp-button_next]:!w-10"
     />
   )
 }

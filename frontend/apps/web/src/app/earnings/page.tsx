@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { format, parseISO, isValid } from 'date-fns'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { EarningsCalendar } from '@/components/earnings-calendar'
@@ -9,12 +9,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Progress } from '@/components/ui/progress'
 import { toast } from 'sonner'
+import { useEarningsQuery, usePrefetchEarnings } from '@/hooks/useEarnings'
 
 // Removed mock data - only using real data from API/database
 
 export default function EarningsPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
+  
+  // NASDAQ API data cutoff - no data beyond mid-October 2025
+  const API_DATA_CUTOFF = new Date('2025-10-17')
   
   // Initialize date from URL parameter or use current date
   const getInitialDate = () => {
@@ -29,76 +33,84 @@ export default function EarningsPage() {
   }
   
   const [selectedDate, setSelectedDate] = useState<Date>(getInitialDate())
-  const [earningsData, setEarningsData] = useState<EarningsData[]>([])
-  const [loading, setLoading] = useState(true)
   const [earningsDates, setEarningsDates] = useState<Date[]>([])
-  const [isFetching, setIsFetching] = useState(false)
-  const [analysisProgress, setAnalysisProgress] = useState<{
-    current: number
-    total: number
-    ticker: string
-    percentage: number
-  } | null>(null)
-  const wsRef = useRef<WebSocket | null>(null)
-
-  // Setup WebSocket connection for progress tracking
+  const prefetchEarnings = usePrefetchEarnings()
+  
+  // Preserve scroll position during hot reloads
   useEffect(() => {
-    const ws = new WebSocket('ws://localhost:8000/ws/progress')
-    let pingInterval: NodeJS.Timeout | null = null
-    
-    ws.onopen = () => {
-      console.log('🚀 ~ file: page.tsx:34 → WebSocket connected')
-      // Send a ping message to keep connection alive
-      pingInterval = window.setInterval(() => {
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send('ping')
-        }
-      }, 30000) // Ping every 30 seconds
-    }
-    
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data)
-      console.log('🚀 ~ file: page.tsx:38 → WebSocket message:', data)
-      
-      if (data.type === 'analysis_progress') {
-        setAnalysisProgress({
-          current: data.current,
-          total: data.total,
-          ticker: data.ticker,
-          percentage: data.percentage
-        })
-        console.log(
-          `🚀 ~ file: page.tsx:65 → Analysis progress: ${data.ticker} (${data.current}/${data.total}) - ${data.percentage}% complete`
-        )
-      } else if (data.type === 'analysis_complete') {
-        setAnalysisProgress(null)
-        console.log('🚀 ~ file: page.tsx:70 → Analysis complete')
-      }
-    }
-    
-    ws.onerror = (error) => {
-      console.error('WebSocket error:', error)
-    }
-    
-    ws.onclose = () => {
-      console.log('🚀 ~ file: page.tsx:77 → WebSocket closed')
-      // Clear ping interval if it exists
-      if (pingInterval) {
-        window.clearInterval(pingInterval)
-      }
-    }
-    
-    wsRef.current = ws
-    
-    return () => {
-      if (pingInterval) {
-        window.clearInterval(pingInterval)
-      }
-      if (wsRef.current) {
-        wsRef.current.close()
+    if (typeof window !== 'undefined') {
+      const savedPosition = sessionStorage.getItem('earnings-scroll-position')
+      if (savedPosition) {
+        window.scrollTo(0, parseInt(savedPosition))
+        sessionStorage.removeItem('earnings-scroll-position')
       }
     }
   }, [])
+  
+  // Save scroll position during Fast Refresh rebuilds
+  useEffect(() => {
+    const saveScrollPosition = () => {
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('earnings-scroll-position', window.scrollY.toString())
+      }
+    }
+    
+    // Save position every few seconds during development
+    const interval = setInterval(saveScrollPosition, 2000)
+    window.addEventListener('beforeunload', saveScrollPosition)
+    
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('beforeunload', saveScrollPosition)
+    }
+  }, [])
+  
+  // Memoize the date parameter to prevent unnecessary re-renders
+  const dateParam = useMemo(() => searchParams.get('date'), [searchParams])
+  
+  // Sync selected date with URL parameter and validate range
+  useEffect(() => {
+    if (dateParam) {
+      const parsedDate = parseISO(dateParam)
+      if (isValid(parsedDate)) {
+        if (parsedDate > API_DATA_CUTOFF) {
+          toast.error("Data not yet available from NASDAQ API for this date")
+          const currentDate = new Date()
+          router.replace(`/earnings?date=${format(currentDate, 'yyyy-MM-dd')}`)
+          setSelectedDate(currentDate)
+        } else {
+          // Update selected date to match URL
+          setSelectedDate(parsedDate)
+        }
+      }
+    }
+  }, [dateParam, router])
+  
+  // Use React Query for earnings data
+  const { 
+    data: earningsData = [], 
+    isLoading: loading, 
+    progress, 
+    isStreaming 
+  } = useEarningsQuery(selectedDate, {
+    onProgress: (progress) => {
+      if (progress.type === 'progress') {
+        console.log(
+          `🚀 ~ file: page.tsx:45 → Analysis progress: ${progress.ticker} (${progress.current}/${progress.total})`
+        )
+      }
+    }
+  })
+  
+  // Calculate percentage for progress bar
+  const analysisProgress = progress && progress.type === 'progress' && progress.current && progress.total
+    ? {
+        current: progress.current,
+        total: progress.total,
+        ticker: progress.ticker || '',
+        percentage: Math.round((progress.current / progress.total) * 100)
+      }
+    : null
 
   // Get all dates that have earnings (for calendar highlighting)
   useEffect(() => {
@@ -122,65 +134,29 @@ export default function EarningsPage() {
     fetchEarningsDates()
   }, []) // Only run once on mount
 
-  // Fetch earnings data for selected date
-  useEffect(() => {
-    // Prevent multiple simultaneous fetches
-    if (isFetching) return
-    
-    const fetchEarningsData = async () => {
-      setIsFetching(true)
-      setLoading(true)
-      
-      try {
-        const dateKey = format(selectedDate, 'yyyy-MM-dd')
-        console.log('🚀 ~ file: page.tsx:48 → fetchEarningsData → Fetching data for date:', dateKey)
-        
-        // Try to fetch from API first with analysis data
-        const url = `http://localhost:8000/api/earnings/${dateKey}?include_analysis=true`
-        console.log('🚀 ~ file: page.tsx:52 → fetchEarningsData → API URL:', url)
-        
-        const response = await fetch(url)
-        console.log('🚀 ~ file: page.tsx:55 → fetchEarningsData → Response status:', response.status)
-        
-        if (response.ok) {
-          const data = await response.json()
-          console.log('🚀 ~ file: page.tsx:59 → fetchEarningsData → Data received:', {
-            date: data.date,
-            source: data.source,
-            count: data.earnings?.length || 0,
-            hasData: !!data.earnings
-          })
-          
-          if (data.earnings) {
-            setEarningsData(data.earnings)
-          } else {
-            setEarningsData([])
-          }
-        } else {
-          // API error - show empty state
-          console.error('🚀 ~ file: page.tsx:73 → fetchEarningsData → API returned error status:', response.status)
-          setEarningsData([])
-          toast.error('Failed to fetch earnings data')
-        }
-      } catch (error) {
-        console.error('🚀 ~ file: page.tsx:67 → fetchEarningsData → error:', error)
-        setEarningsData([])
-        toast.error('Failed to connect to earnings service')
-      } finally {
-        setLoading(false)
-        setIsFetching(false)
-      }
-    }
-
-    fetchEarningsData()
-  }, [selectedDate])
 
   const handleDateSelect = useCallback((date: Date) => {
-    setSelectedDate(date)
-    // Update URL with the selected date
-    const dateStr = format(date, 'yyyy-MM-dd')
-    router.push(`/earnings?date=${dateStr}`)
-  }, [router])
+    // Check if date is beyond API data range
+    if (date > API_DATA_CUTOFF) {
+      toast.error("Data not yet available from NASDAQ API for this date")
+      return
+    }
+    
+    // Only update if date is different to prevent unnecessary re-renders
+    const currentDateStr = format(selectedDate, 'yyyy-MM-dd')
+    const newDateStr = format(date, 'yyyy-MM-dd')
+    
+    if (currentDateStr !== newDateStr) {
+      setSelectedDate(date)
+      router.push(`/earnings?date=${newDateStr}`)
+    }
+  }, [router, selectedDate])
+  
+  // Prefetch adjacent dates for smoother navigation
+  const handleDateHover = useCallback((date: Date) => {
+    // Prefetch the hovered date
+    prefetchEarnings(date)
+  }, [prefetchEarnings])
 
 
 
@@ -194,9 +170,9 @@ export default function EarningsPage() {
       </div>
 
       {/* Calendar Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        <div className="lg:col-span-1">
-          <Card>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
+        <div className="lg:col-span-2">
+          <Card className="h-full">
             <CardHeader>
               <CardTitle>Select Date</CardTitle>
             </CardHeader>
@@ -204,6 +180,7 @@ export default function EarningsPage() {
               <EarningsCalendar 
                 onDateSelect={handleDateSelect}
                 earningsDates={earningsDates}
+                maxDate={API_DATA_CUTOFF}
               />
               <div className="mt-4 p-3 bg-muted rounded-lg">
                 <p className="text-sm font-medium">
@@ -233,38 +210,63 @@ export default function EarningsPage() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {earningsData
-                    .filter(stock => stock.recommendation === 'RECOMMENDED')
-                    .slice(0, 5)
-                    .map((stock) => (
-                      <div key={stock.ticker} className="border-l-4 border-green-600 pl-4 py-2">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h4 className="font-semibold">{stock.ticker}</h4>
-                            <p className="text-sm text-muted-foreground">{stock.companyName}</p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {stock.reportTime} • {stock.marketCap}
-                            </p>
+                  {(() => {
+                    const recommendedTrades = earningsData
+                      .filter(stock => stock.recommendation === 'RECOMMENDED')
+                      .sort((a, b) => {
+                        // Sort by market cap (larger = better for options liquidity)
+                        const getMarketCapValue = (cap: string) => {
+                          if (!cap) return 0
+                          const num = parseFloat(cap.replace(/[$,BM]/g, ''))
+                          if (cap.includes('B')) return num * 1000000000
+                          if (cap.includes('M')) return num * 1000000
+                          return num
+                        }
+                        return getMarketCapValue(b.marketCap || '') - getMarketCapValue(a.marketCap || '')
+                      })
+                    
+                    if (recommendedTrades.length === 0) {
+                      return (
+                        <p className="text-muted-foreground text-center py-8">
+                          No recommended trades for this date
+                        </p>
+                      )
+                    }
+                    
+                    return (
+                      <div style={{height: '540px'}} className="overflow-y-auto space-y-3 pr-2">
+                        {recommendedTrades.map((stock, index) => (
+                          <div key={stock.ticker} className="border-l-4 border-green-600 pl-4 py-2">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="bg-green-600 text-white text-xs font-bold px-2 py-1 rounded">
+                                    #{index + 1}
+                                  </span>
+                                  <h4 className="font-semibold">{stock.ticker}</h4>
+                                </div>
+                                <p className="text-sm text-muted-foreground">{stock.companyName}</p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {stock.reportTime} • {stock.marketCap}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-sm font-medium">Position Size</p>
+                                <p className="text-lg font-bold text-green-600">
+                                  {stock.position_size || '6%'}
+                                </p>
+                              </div>
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <p className="text-sm font-medium">Position Size</p>
-                            <p className="text-lg font-bold text-green-600">
-                              {stock.position_size ? `${stock.position_size}%` : '6%'}
-                            </p>
-                          </div>
-                        </div>
+                        ))}
+                        {recommendedTrades.length > 3 && (
+                          <p className="text-sm text-muted-foreground text-center pt-2 pb-1">
+                            Total: {recommendedTrades.length} recommended trades
+                          </p>
+                        )}
                       </div>
-                    ))}
-                  {earningsData.filter(stock => stock.recommendation === 'RECOMMENDED').length === 0 && (
-                    <p className="text-muted-foreground text-center py-8">
-                      No recommended trades for this date
-                    </p>
-                  )}
-                  {earningsData.filter(stock => stock.recommendation === 'RECOMMENDED').length > 5 && (
-                    <p className="text-sm text-muted-foreground text-center pt-2">
-                      +{earningsData.filter(stock => stock.recommendation === 'RECOMMENDED').length - 5} more trades available
-                    </p>
-                  )}
+                    )
+                  })()}
                 </div>
               )}
             </CardContent>
@@ -293,7 +295,9 @@ export default function EarningsPage() {
                 <div className="animate-pulse">
                   <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
                 </div>
-                <p className="text-lg text-foreground mt-4">Loading earnings data...</p>
+                <p className="text-lg text-foreground mt-4">
+                  {isStreaming ? 'Analyzing earnings data...' : 'Loading earnings data...'}
+                </p>
                 {analysisProgress ? (
                   <div className="mt-4 w-64 space-y-2">
                     <p className="text-sm text-muted-foreground text-center">
@@ -304,8 +308,10 @@ export default function EarningsPage() {
                       {analysisProgress.percentage}% complete
                     </p>
                   </div>
+                ) : isStreaming ? (
+                  <p className="text-sm text-muted-foreground">Starting analysis...</p>
                 ) : (
-                  <p className="text-sm text-muted-foreground">Fetching and analyzing stocks</p>
+                  <p className="text-sm text-muted-foreground">Fetching earnings data</p>
                 )}
               </div>
             </div>

@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 import logging
 import time
 import asyncio
+import json
 from typing import List, Dict, Optional
 
 load_dotenv()
@@ -312,6 +313,93 @@ def get_cached_earnings_for_date(date_str: str) -> Optional[List[Dict]]:
     except Exception as e:
         logger.error(f"Error getting cached earnings: {e}")
         return None
+    finally:
+        conn.close()
+
+async def store_earnings_with_analysis(date_str: str, analyzed_earnings: List[Dict]) -> bool:
+    """Store earnings data with analysis results in the database"""
+    conn = get_db_connection()
+    if not conn:
+        return False
+    
+    try:
+        with conn.cursor() as cursor:
+            # First, clear existing data for this date
+            delete_sql = "DELETE FROM earnings_calendar WHERE report_date = %s"
+            cursor.execute(delete_sql, (date_str,))
+            
+            # Insert new analyzed data
+            for earning in analyzed_earnings:
+                insert_sql = """
+                    INSERT INTO earnings_calendar (
+                        ticker, company_name, report_date, report_time,
+                        market_cap, eps_forecast, recommendation, risk_level,
+                        expected_move, position_size, iv_rank, criteria_met,
+                        priority_score, analysis_timestamp, created_at
+                    ) VALUES (
+                        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                    )
+                """
+                
+                # Convert eps_estimate to float if it's a string
+                eps_estimate = earning.get('estimate', earning.get('eps_estimate'))
+                if eps_estimate and isinstance(eps_estimate, str):
+                    try:
+                        # Remove any non-numeric characters except . and -
+                        eps_estimate = eps_estimate.replace('$', '').replace(',', '').strip()
+                        if eps_estimate == '-' or eps_estimate.lower() == 'n/a':
+                            eps_estimate = None
+                        else:
+                            eps_estimate = float(eps_estimate)
+                    except (ValueError, TypeError):
+                        eps_estimate = None
+                
+                # Handle criteria_met - convert dict to JSON string
+                criteria_met = earning.get('criteria_met', {})
+                if isinstance(criteria_met, dict):
+                    criteria_met = json.dumps(criteria_met)
+                
+                # Handle numeric fields
+                def safe_float(value):
+                    if value is None:
+                        return None
+                    if isinstance(value, str):
+                        value = value.replace('%', '').strip()
+                        if value == '' or value == '-' or value.lower() == 'n/a':
+                            return None
+                    try:
+                        return float(value)
+                    except (ValueError, TypeError):
+                        return None
+                
+                values = (
+                    earning.get('ticker', ''),
+                    earning.get('companyName', ''),
+                    date_str,
+                    earning.get('reportTime', 'TBD'),
+                    earning.get('marketCap', ''),
+                    eps_estimate,
+                    earning.get('recommendation', 'AVOID'),
+                    earning.get('riskLevel', 'HIGH'),
+                    safe_float(earning.get('expected_move')),
+                    earning.get('position_size', '0%'),
+                    safe_float(earning.get('iv_rank')),
+                    criteria_met,
+                    safe_float(earning.get('priority_score', 0.0)),
+                    datetime.now(),
+                    datetime.now()
+                )
+                
+                cursor.execute(insert_sql, values)
+            
+            conn.commit()
+            logger.info(f"Successfully stored {len(analyzed_earnings)} analyzed earnings for {date_str}")
+            return True
+            
+    except Exception as e:
+        logger.error(f"Error storing analyzed earnings: {e}")
+        conn.rollback()
+        return False
     finally:
         conn.close()
 
