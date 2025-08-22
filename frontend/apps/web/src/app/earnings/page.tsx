@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { format } from 'date-fns'
+import { format, parseISO, isValid } from 'date-fns'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { EarningsCalendar } from '@/components/earnings-calendar'
 import { EarningsTable, EarningsData } from '@/components/earnings-table'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -12,7 +13,22 @@ import { toast } from 'sonner'
 // Removed mock data - only using real data from API/database
 
 export default function EarningsPage() {
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date())
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  
+  // Initialize date from URL parameter or use current date
+  const getInitialDate = () => {
+    const dateParam = searchParams.get('date')
+    if (dateParam) {
+      const parsedDate = parseISO(dateParam)
+      if (isValid(parsedDate)) {
+        return parsedDate
+      }
+    }
+    return new Date()
+  }
+  
+  const [selectedDate, setSelectedDate] = useState<Date>(getInitialDate())
   const [earningsData, setEarningsData] = useState<EarningsData[]>([])
   const [loading, setLoading] = useState(true)
   const [earningsDates, setEarningsDates] = useState<Date[]>([])
@@ -28,9 +44,16 @@ export default function EarningsPage() {
   // Setup WebSocket connection for progress tracking
   useEffect(() => {
     const ws = new WebSocket('ws://localhost:8000/ws/progress')
+    let pingInterval: NodeJS.Timeout | null = null
     
     ws.onopen = () => {
       console.log('🚀 ~ file: page.tsx:34 → WebSocket connected')
+      // Send a ping message to keep connection alive
+      pingInterval = window.setInterval(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send('ping')
+        }
+      }, 30000) // Ping every 30 seconds
     }
     
     ws.onmessage = (event) => {
@@ -44,8 +67,12 @@ export default function EarningsPage() {
           ticker: data.ticker,
           percentage: data.percentage
         })
+        console.log(
+          `🚀 ~ file: page.tsx:65 → Analysis progress: ${data.ticker} (${data.current}/${data.total}) - ${data.percentage}% complete`
+        )
       } else if (data.type === 'analysis_complete') {
         setAnalysisProgress(null)
+        console.log('🚀 ~ file: page.tsx:70 → Analysis complete')
       }
     }
     
@@ -53,9 +80,20 @@ export default function EarningsPage() {
       console.error('WebSocket error:', error)
     }
     
+    ws.onclose = () => {
+      console.log('🚀 ~ file: page.tsx:77 → WebSocket closed')
+      // Clear ping interval if it exists
+      if (pingInterval) {
+        window.clearInterval(pingInterval)
+      }
+    }
+    
     wsRef.current = ws
     
     return () => {
+      if (pingInterval) {
+        window.clearInterval(pingInterval)
+      }
       if (wsRef.current) {
         wsRef.current.close()
       }
@@ -139,7 +177,10 @@ export default function EarningsPage() {
 
   const handleDateSelect = useCallback((date: Date) => {
     setSelectedDate(date)
-  }, [])
+    // Update URL with the selected date
+    const dateStr = format(date, 'yyyy-MM-dd')
+    router.push(`/earnings?date=${dateStr}`)
+  }, [router])
 
 
 

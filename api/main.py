@@ -49,20 +49,35 @@ class ConnectionManager:
         self.active_connections: List[WebSocket] = []
 
     async def connect(self, websocket: WebSocket):
+        logger.info("ConnectionManager.connect called")
         await websocket.accept()
         self.active_connections.append(websocket)
+        logger.info(f"WebSocket added to active_connections. Count: {len(self.active_connections)}")
 
     def disconnect(self, websocket: WebSocket):
         self.active_connections.remove(websocket)
 
     async def send_progress(self, message: dict):
         # Send progress to all connected clients
+        if len(self.active_connections) == 0:
+            logger.debug(f"No active connections to send progress for {message.get('ticker', 'unknown')}")
+            return
+            
+        logger.info(f"Sending progress to {len(self.active_connections)} clients: {message.get('ticker', 'unknown')}")
+        disconnected = []
         for connection in self.active_connections:
             try:
                 await connection.send_json(message)
-            except:
+                logger.info(f"Successfully sent progress message for {message.get('ticker', 'unknown')}")
+            except Exception as e:
                 # Connection might be closed
-                pass
+                logger.error(f"Failed to send progress: {e}")
+                disconnected.append(connection)
+        
+        # Remove disconnected clients
+        for conn in disconnected:
+            if conn in self.active_connections:
+                self.active_connections.remove(conn)
 
 manager = ConnectionManager()
 
@@ -87,12 +102,21 @@ async def health_check():
 
 @app.websocket("/ws/progress")
 async def websocket_endpoint(websocket: WebSocket):
+    logger.info("WebSocket connection attempt received")
     await manager.connect(websocket)
+    logger.info(f"WebSocket connected. Total active connections: {len(manager.active_connections)}")
+    
     try:
         while True:
             # Keep connection alive
-            await websocket.receive_text()
+            data = await websocket.receive_text()
+            logger.info(f"Received WebSocket message: {data}")
     except WebSocketDisconnect:
+        logger.info("WebSocket disconnected")
+        manager.disconnect(websocket)
+        logger.info(f"After disconnect. Total active connections: {len(manager.active_connections)}")
+    except Exception as e:
+        logger.error(f"WebSocket error: {e}")
         manager.disconnect(websocket)
 
 async def fetch_earnings_from_api(date_str: str) -> List[Dict]:
