@@ -170,9 +170,9 @@ export default function EarningsPage() {
       </div>
 
       {/* Calendar Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
-        <div className="lg:col-span-2">
-          <Card className="h-full">
+      <div className="flex flex-col lg:flex-row gap-6 mb-6">
+        <div>
+          <Card className="w-fit">
             <CardHeader>
               <CardTitle>Select Date</CardTitle>
             </CardHeader>
@@ -192,8 +192,8 @@ export default function EarningsPage() {
         </div>
 
         {/* Recommended Trades Box */}
-        <div className="lg:col-span-2">
-          <Card className="h-full">
+        <div className="flex-1 lg:flex-none">
+          <Card className="w-full lg:w-[400px] h-full">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <span className="text-green-600">●</span>
@@ -234,7 +234,7 @@ export default function EarningsPage() {
                     }
                     
                     return (
-                      <div style={{height: '540px'}} className="overflow-y-auto space-y-3 pr-2">
+                      <div style={{height: '370px'}} className="overflow-y-auto space-y-3 pr-2">
                         {recommendedTrades.map((stock, index) => (
                           <div key={stock.ticker} className="border-l-4 border-green-600 pl-4 py-2">
                             <div className="flex justify-between items-start">
