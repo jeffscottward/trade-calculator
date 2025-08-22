@@ -46,7 +46,7 @@
         "dependencies": [
           2
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -93,14 +93,14 @@
       {
         "id": 8,
         "title": "Implement Broker API Abstraction Layer",
-        "description": "Create unified interface for Interactive Brokers and Composer.trade APIs",
-        "details": "1. Design IBroker interface with methods: connect(), placeOrder(), getPositions(), getAccountInfo()\n2. Implement IBClientPortal adapter for Interactive Brokers\n3. Implement ComposerTrade adapter for Composer.trade API\n4. Create factory pattern for broker selection based on config\n5. Add paper trading mode toggle\n6. Implement order validation before submission\n7. Add comprehensive logging for all broker interactions",
-        "testStrategy": "Test both broker connections with paper trading, verify order placement, test error handling for connection failures",
-        "priority": "medium",
+        "description": "Create unified interface with Composer.trade API as primary broker for automated trading execution, with Interactive Brokers as fallback option",
+        "status": "pending",
         "dependencies": [
           7
         ],
-        "status": "pending",
+        "priority": "medium",
+        "details": "1. Design IBroker interface with methods: connect(), placeOrder(), getPositions(), getAccountInfo()\n2. Implement ComposerTrade adapter as primary broker with full feature support\n3. Implement IBClientPortal adapter for Interactive Brokers as fallback\n4. Create factory pattern for broker selection with Composer.trade as default\n5. Add automatic failover mechanism from Composer.trade to Interactive Brokers\n6. Add paper trading mode toggle for both brokers\n7. Implement order validation before submission with broker-specific rules\n8. Add comprehensive logging for all broker interactions with performance metrics\n9. Create configuration system for broker priority and failover thresholds\n10. Implement health check endpoints for both brokers",
+        "testStrategy": "Test Composer.trade API as primary broker with paper trading, verify automatic failover to Interactive Brokers on connection failure, test order placement and validation for both brokers, verify configuration switching",
         "subtasks": []
       },
       {
@@ -160,11 +160,53 @@
         ],
         "status": "pending",
         "subtasks": []
+      },
+      {
+        "id": 13,
+        "title": "Add Stock News Feed Component to Earnings Calendar Page",
+        "description": "Integrate a real-time news feed component on the earnings calendar page that displays market news from MarketWatch and Yahoo Finance using the RSS2JSON API, providing contextual news for earnings-related events.",
+        "details": "1. Create NewsFeed component as a collapsible sidebar or bottom panel on the earnings calendar page\n2. Implement RSS2JSON API integration for MarketWatch and Yahoo Finance RSS feeds\n3. Create news aggregation service to fetch and merge feeds from both sources\n4. Implement caching strategy with 5-minute refresh intervals to balance freshness and API limits\n5. Add filtering capabilities to show only earnings-related news (filter by keywords: earnings, quarterly, revenue, profit, guidance)\n6. Design responsive card-based layout with: headline, source, timestamp, summary, and link to full article\n7. Implement real-time update indicators (new items badge, subtle animations)\n8. Add search functionality within news feed\n9. Create fallback mechanism for API failures (cached data or static message)\n10. Implement lazy loading for large news lists with virtual scrolling\n11. Add source attribution and link tracking for analytics\n12. Style with consistent theme using Tailwind CSS, ensuring dark mode support",
+        "testStrategy": "1. Test RSS2JSON API integration with both MarketWatch and Yahoo Finance feeds\n2. Verify news items render correctly with all required fields (headline, source, timestamp, summary)\n3. Test filtering functionality with various earnings-related keywords\n4. Validate caching behavior - confirm news refreshes every 5 minutes\n5. Test responsive design on mobile, tablet, and desktop viewports\n6. Simulate API failures and verify fallback mechanisms work correctly\n7. Test search functionality with various search terms\n8. Verify real-time update indicators appear when new news arrives\n9. Test performance with 100+ news items using virtual scrolling\n10. Validate all external links open in new tabs with proper security attributes\n11. Test dark mode compatibility for all news feed elements\n12. Confirm analytics tracking fires correctly on link clicks",
+        "status": "done",
+        "dependencies": [
+          3,
+          5
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 14,
+        "title": "Replace Hard-Coded Date Cutoff with Dynamic Calculation",
+        "description": "Replace all hard-coded date cutoffs with a dynamic calculation that sets the cutoff to 2 months forward from the current date minus 1 week, updating all date validation logic across the application.",
+        "details": "1. Identify all hard-coded date cutoffs in the codebase (search for magic numbers like '2024-03-15' or similar fixed dates)\n2. Create a centralized date utility function `getDynamicCutoffDate()` that calculates: current date + 2 months - 1 week\n3. Handle edge cases: month/year rollovers, leap years, timezone considerations\n4. Update all date validation logic in:\n   - Earnings data fetching services (replace static date ranges)\n   - Calendar view date range calculations\n   - Trade opportunity filtering logic\n   - Historical data analysis cutoff points\n   - API query parameters for date ranges\n5. Implement proper timezone handling using libraries like date-fns-tz or moment-timezone\n6. Add configuration parameter for the 2-month/1-week offset to allow future adjustments\n7. Create fallback mechanism for testing environments with fixed dates\n8. Update all unit tests that rely on hard-coded date assumptions\n9. Document the new dynamic date calculation in the project README",
+        "testStrategy": "1. Unit test the `getDynamicCutoffDate()` function with various current dates including edge cases (end of month, leap year February, year boundaries)\n2. Test timezone handling by setting system time to different zones and verifying consistent results\n3. Verify all earnings data fetches use the dynamic cutoff by checking API calls in network tab\n4. Test calendar view displays correct date ranges based on dynamic calculation\n5. Validate trade opportunity filtering correctly excludes opportunities beyond the dynamic cutoff\n6. Create integration tests that mock different current dates and verify the entire pipeline uses correct cutoffs\n7. Test configuration override functionality by temporarily changing the 2-month/1-week offset\n8. Verify backward compatibility by ensuring historical data analysis still works correctly\n9. Run end-to-end tests with system date set to various values to ensure consistent behavior",
+        "status": "done",
+        "dependencies": [
+          3,
+          5
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 15,
+        "title": "Research and Evaluate Composer.trade API for Automated Trading",
+        "description": "Conduct comprehensive research on Composer.trade API capabilities, authentication methods, order types, and integration requirements to evaluate it as an alternative to Interactive Brokers for automated earnings calendar spread trades.",
+        "details": "1. Create research documentation structure in /docs/composer-api-research.md\n2. Investigate API authentication methods: OAuth 2.0 flow, API key management, token refresh mechanisms\n3. Document all available order types: market, limit, stop-loss, stop-limit, bracket orders, OCO orders\n4. Analyze API rate limits: requests per minute/hour, concurrent connection limits, throttling behavior\n5. Map Composer.trade order types to earnings spread trade requirements: calendar spreads, iron condors, vertical spreads\n6. Test API endpoints using Postman collection: /api/v1/orders, /api/v1/positions, /api/v1/account\n7. Evaluate webhook support for order status updates and trade confirmations\n8. Create integration architecture diagram showing data flow from earnings calendar → trade analysis → order execution\n9. Document error handling patterns and retry mechanisms\n10. Compare Composer.trade vs Interactive Brokers on: commission structure, options liquidity, execution speed, available markets\n11. Create proof-of-concept Python script using requests library to test basic order placement\n12. Document security considerations: API key storage, request signing, SSL/TLS requirements\n13. Create decision matrix with scoring criteria for go/no-go decision",
+        "testStrategy": "1. Verify all documented API endpoints return 200 status codes with valid authentication\n2. Test rate limiting by sending 100+ requests in rapid succession and verify proper 429 responses\n3. Validate order placement flow: create test orders in paper trading mode, verify order appears in positions\n4. Test error scenarios: invalid API keys, malformed requests, insufficient funds\n5. Verify webhook delivery by creating test endpoint and confirming order status updates\n6. Run integration test: connect earnings calendar data to Composer.trade API and execute mock calendar spread\n7. Performance test: measure API response times for order placement under different market conditions\n8. Security test: verify API keys are not logged, HTTPS is enforced, tokens expire correctly",
+        "status": "pending",
+        "dependencies": [
+          7,
+          12
+        ],
+        "priority": "medium",
+        "subtasks": []
       }
     ],
     "metadata": {
       "created": "2025-08-21T23:19:00.050Z",
-      "updated": "2025-08-21T23:27:21.980Z",
+      "updated": "2025-08-22T20:00:32.735Z",
       "description": "Tasks for master context"
     }
   }

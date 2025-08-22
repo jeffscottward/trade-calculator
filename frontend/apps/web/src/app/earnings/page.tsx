@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect, useMemo } from 'react'
-import { format, parseISO, isValid } from 'date-fns'
+import { format, parseISO, isValid, addMonths, subWeeks } from 'date-fns'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { EarningsCalendar } from '@/components/earnings-calendar'
 import { EarningsTable, EarningsData } from '@/components/earnings-table'
@@ -18,8 +18,12 @@ export default function EarningsPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
   
-  // NASDAQ API data cutoff - no data beyond mid-October 2025
-  const API_DATA_CUTOFF = new Date('2025-10-17')
+  // Dynamic date cutoff - 2 months forward from current date minus 1 week
+  const DYNAMIC_CUTOFF = useMemo(() => {
+    const currentDate = new Date()
+    const twoMonthsForward = addMonths(currentDate, 2)
+    return subWeeks(twoMonthsForward, 1)
+  }, [])
   
   // Initialize date from URL parameter or use current date
   const getInitialDate = () => {
@@ -74,8 +78,8 @@ export default function EarningsPage() {
     if (dateParam) {
       const parsedDate = parseISO(dateParam)
       if (isValid(parsedDate)) {
-        if (parsedDate > API_DATA_CUTOFF) {
-          toast.error("Data not yet available from NASDAQ API for this date")
+        if (parsedDate > DYNAMIC_CUTOFF) {
+          toast.error("Data not available beyond 2 months from current date")
           const currentDate = new Date()
           router.replace(`/earnings?date=${format(currentDate, 'yyyy-MM-dd')}`)
           setSelectedDate(currentDate)
@@ -137,9 +141,9 @@ export default function EarningsPage() {
 
 
   const handleDateSelect = useCallback((date: Date) => {
-    // Check if date is beyond API data range
-    if (date > API_DATA_CUTOFF) {
-      toast.error("Data not yet available from NASDAQ API for this date")
+    // Check if date is beyond dynamic cutoff (2 months - 1 week)
+    if (date > DYNAMIC_CUTOFF) {
+      toast.error("Data not available beyond 2 months from current date")
       return
     }
     
@@ -181,7 +185,7 @@ export default function EarningsPage() {
               <EarningsCalendar 
                 onDateSelect={handleDateSelect}
                 earningsDates={earningsDates}
-                maxDate={API_DATA_CUTOFF}
+                maxDate={DYNAMIC_CUTOFF}
               />
               <div className="mt-4 p-3 bg-muted rounded-lg">
                 <p className="text-sm font-medium">
