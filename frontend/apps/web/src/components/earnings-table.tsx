@@ -154,7 +154,9 @@ export function EarningsTable({ data }: EarningsTableProps) {
         ),
       }),
     columnHelper.accessor('reportTime', {
-      header: 'Report Time',
+      header: () => (
+        <div className="font-medium text-sm">Report Time</div>
+      ),
       cell: (info) => {
         const time = info.getValue() as string
         const timeMap: Record<string, string> = {
@@ -241,8 +243,28 @@ export function EarningsTable({ data }: EarningsTableProps) {
       },
     }),
     columnHelper.accessor('estimate', {
-      header: 'EPS Estimate',
-      cell: (info) => info.getValue() || '-',
+      header: () => (
+        <div className="font-medium text-sm">EPS Estimate</div>
+      ),
+      cell: (info) => {
+        const value = info.getValue()
+        if (!value) return <span className="text-muted-foreground">-</span>
+        
+        // Check if it's a negative value (has parentheses)
+        const isNegative = value.includes('(')
+        
+        // Remove parentheses and dollar sign, extract the number
+        let cleanValue = value.replace(/[()$]/g, '').trim()
+        
+        // Format with + or - sign
+        const formattedValue = isNegative ? `-$${cleanValue}` : `+$${cleanValue}`
+        
+        return (
+          <span className={isNegative ? 'text-red-600 dark:text-red-400 font-medium' : 'text-green-600 dark:text-green-400 font-medium'}>
+            {formattedValue}
+          </span>
+        )
+      },
     }),
     ]
   }, [columnHelper])

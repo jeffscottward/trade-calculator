@@ -239,7 +239,27 @@ export default function StockDetailPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">EPS Estimate</span>
-                  <span className="font-medium">{stockDetails.estimate}</span>
+                  <span className="font-medium">
+                    {(() => {
+                      const value = stockDetails.estimate
+                      if (!value) return '-'
+                      
+                      // Check if it's a negative value (has parentheses)
+                      const isNegative = value.includes('(')
+                      
+                      // Remove parentheses and dollar sign, extract the number
+                      let cleanValue = value.replace(/[()$]/g, '').trim()
+                      
+                      // Format with + or - sign
+                      const formattedValue = isNegative ? `-$${cleanValue}` : `+$${cleanValue}`
+                      
+                      return (
+                        <span className={isNegative ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}>
+                          {formattedValue}
+                        </span>
+                      )
+                    })()}
+                  </span>
                 </div>
                 {stockDetails.numEstimates && (
                   <div className="flex justify-between">
@@ -250,7 +270,27 @@ export default function StockDetailPage() {
                 {stockDetails.lastYearEPS && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Last Year EPS</span>
-                    <span className="font-medium">{stockDetails.lastYearEPS}</span>
+                    <span className="font-medium">
+                      {(() => {
+                        const value = stockDetails.lastYearEPS
+                        if (!value) return '-'
+                        
+                        // Check if it's a negative value (has parentheses)
+                        const isNegative = value.includes('(')
+                        
+                        // Remove parentheses and dollar sign, extract the number
+                        let cleanValue = value.replace(/[()$]/g, '').trim()
+                        
+                        // Format with + or - sign
+                        const formattedValue = isNegative ? `-$${cleanValue}` : `+$${cleanValue}`
+                        
+                        return (
+                          <span className={isNegative ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}>
+                            {formattedValue}
+                          </span>
+                        )
+                      })()}
+                    </span>
                   </div>
                 )}
                 <div className="flex justify-between">
