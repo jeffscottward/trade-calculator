@@ -42,7 +42,7 @@ BROKER_CONFIG = {
 
 # Data Provider Configuration
 DATA_CONFIG = {
-    'alpha_vantage_key': os.getenv('ALPHA_VANTAGE_KEY', ''),
+    # NASDAQ API is used for earnings - no key required
     'earnings_horizon': '3month',
     'yfinance_cache': True,
     'yfinance_cache_dir': '.cache/yfinance'

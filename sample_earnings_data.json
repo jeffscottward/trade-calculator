@@ -1,0 +1,222 @@
+[
+  {
+    "time": "time-pre-market",
+    "name": "Walmart Inc.",
+    "marketCap": "$818,551,491,081",
+    "fiscalQuarterEnding": "Jul/2025",
+    "epsForecast": "$0.73",
+    "noOfEsts": "12",
+    "lastYearRptDt": "8/15/2024",
+    "lastYearEPS": "$0.67",
+    "report_date": "2025-08-21"
+  },
+  {
+    "time": "time-after-hours",
+    "name": "Intuit Inc.",
+    "marketCap": "$195,025,795,050",
+    "fiscalQuarterEnding": "Jul/2025",
+    "epsForecast": "$1.30",
+    "noOfEsts": "7",
+    "lastYearRptDt": "8/22/2024",
+    "lastYearEPS": "$0.61",
+    "report_date": "2025-08-21"
+  },
+  {
+    "time": "time-pre-market",
+    "name": "Full Truck Alliance Co. Ltd.",
+    "marketCap": "$115,152,950,649",
+    "fiscalQuarterEnding": "Jun/2025",
+    "epsForecast": "$0.15",
+    "noOfEsts": "1",
+    "lastYearRptDt": "8/21/2024",
+    "lastYearEPS": "$0.12",
+    "report_date": "2025-08-21"
+  },
+  {
+    "time": "time-after-hours",
+    "name": "Workday, Inc.",
+    "marketCap": "$60,739,830,000",
+    "fiscalQuarterEnding": "Jul/2025",
+    "epsForecast": "$0.80",
+    "noOfEsts": "11",
+    "lastYearRptDt": "8/22/2024",
+    "lastYearEPS": "$0.37",
+    "report_date": "2025-08-21"
+  },
+  {
+    "time": "time-after-hours",
+    "name": "Ross Stores, Inc.",
+    "marketCap": "$47,866,770,748",
+    "fiscalQuarterEnding": "Jul/2025",
+    "epsForecast": "$1.52",
+    "noOfEsts": "8",
+    "lastYearRptDt": "8/22/2024",
+    "lastYearEPS": "$1.59",
+    "report_date": "2025-08-21"
+  },
+  {
+    "time": "time-after-hours",
+    "name": "Zoom Communications, Inc.",
+    "marketCap": "$21,831,836,548",
+    "fiscalQuarterEnding": "Jul/2025",
+    "epsForecast": "$0.77",
+    "noOfEsts": "10",
+    "lastYearRptDt": "8/21/2024",
+    "lastYearEPS": "$0.71",
+    "report_date": "2025-08-21"
+  },
+  {
+    "time": "time-pre-market",
+    "name": "Aegon Ltd.",
+    "marketCap": "$14,966,141,831",
+    "fiscalQuarterEnding": "Jun/2025",
+    "epsForecast": "",
+    "noOfEsts": "4",
+    "lastYearRptDt": "N/A",
+    "lastYearEPS": "N/A",
+    "report_date": "2025-08-21"
+  },
+  {
+    "time": "time-pre-market",
+    "name": "Bilibili Inc.",
+    "marketCap": "$10,546,321,300",
+    "fiscalQuarterEnding": "Jun/2025",
+    "epsForecast": "$0.08",
+    "noOfEsts": "2",
+    "lastYearRptDt": "8/22/2024",
+    "lastYearEPS": "($0.17)",
+    "report_date": "2025-08-21"
+  },
+  {
+    "time": "time-pre-market",
+    "name": "MINISO Group Holding Limited",
+    "marketCap": "$6,511,832,245",
+    "fiscalQuarterEnding": "Jun/2025",
+    "epsForecast": "",
+    "noOfEsts": "N/A",
+    "lastYearRptDt": "8/30/2024",
+    "lastYearEPS": "$0.26",
+    "report_date": "2025-08-21"
+  },
+  {
+    "time": "time-pre-market",
+    "name": "The Marzetti Company",
+    "marketCap": "$4,916,104,080",
+    "fiscalQuarterEnding": "Jun/2025",
+    "epsForecast": "$1.35",
+    "noOfEsts": "1",
+    "lastYearRptDt": "8/22/2024",
+    "lastYearEPS": "$1.35",
+    "report_date": "2025-08-21"
+  },
+  {
+    "time": "time-pre-market",
+    "name": "OSI Systems, Inc.",
+    "marketCap": "$3,750,409,152",
+    "fiscalQuarterEnding": "Jun/2025",
+    "epsForecast": "$3.19",
+    "noOfEsts": "5",
+    "lastYearRptDt": "8/22/2024",
+    "lastYearEPS": "$2.84",
+    "report_date": "2025-08-21"
+  },
+  {
+    "time": "time-pre-market",
+    "name": "VNET Group, Inc.",
+    "marketCap": "$2,146,826,690",
+    "fiscalQuarterEnding": "Jun/2025",
+    "epsForecast": "$0.01",
+    "noOfEsts": "2",
+    "lastYearRptDt": "8/27/2024",
+    "lastYearEPS": "$0.06",
+    "report_date": "2025-08-21"
+  },
+  {
+    "time": "time-not-supplied",
+    "name": "Ares Acquisition Corporation II",
+    "marketCap": "$1,782,592,266",
+    "fiscalQuarterEnding": "Jun/2025",
+    "epsForecast": "",
+    "noOfEsts": "4",
+    "lastYearRptDt": "N/A",
+    "lastYearEPS": "N/A",
+    "report_date": "2025-08-21"
+  },
+  {
+    "time": "time-pre-market",
+    "name": "Navios Maritime Partners LP",
+    "marketCap": "$1,347,410,820",
+    "fiscalQuarterEnding": "Jun/2025",
+    "epsForecast": "$1.74",
+    "noOfEsts": "1",
+    "lastYearRptDt": "8/20/2024",
+    "lastYearEPS": "$3.06",
+    "report_date": "2025-08-21"
+  },
+  {
+    "time": "time-pre-market",
+    "name": "ScanSource, Inc.",
+    "marketCap": "$960,991,208",
+    "fiscalQuarterEnding": "Jun/2025",
+    "epsForecast": "$0.91",
+    "noOfEsts": "2",
+    "lastYearRptDt": "8/27/2024",
+    "lastYearEPS": "$0.80",
+    "report_date": "2025-08-21"
+  },
+  {
+    "time": "time-pre-market",
+    "name": "Yatsen Holding Limited",
+    "marketCap": "$876,328,001",
+    "fiscalQuarterEnding": "Jun/2025",
+    "epsForecast": "",
+    "noOfEsts": "N/A",
+    "lastYearRptDt": "8/20/2024",
+    "lastYearEPS": "($0.11)",
+    "report_date": "2025-08-21"
+  },
+  {
+    "time": "time-pre-market",
+    "name": "Hovnanian Enterprises Inc",
+    "marketCap": "$863,642,337",
+    "fiscalQuarterEnding": "Jul/2025",
+    "epsForecast": "$3.51",
+    "noOfEsts": "1",
+    "lastYearRptDt": "8/22/2024",
+    "lastYearEPS": "$9.75",
+    "report_date": "2025-08-21"
+  },
+  {
+    "time": "time-pre-market",
+    "name": "Canadian Solar Inc.",
+    "marketCap": "$853,762,886",
+    "fiscalQuarterEnding": "Jun/2025",
+    "epsForecast": "$0.76",
+    "noOfEsts": "3",
+    "lastYearRptDt": "8/22/2024",
+    "lastYearEPS": "$0.02",
+    "report_date": "2025-08-21"
+  },
+  {
+    "time": "time-after-hours",
+    "name": "Oculis Holding AG",
+    "marketCap": "$766,275,155",
+    "fiscalQuarterEnding": "Jun/2025",
+    "epsForecast": "($0.53)",
+    "noOfEsts": "4",
+    "lastYearRptDt": "8/27/2024",
+    "lastYearEPS": "($0.56)",
+    "report_date": "2025-08-21"
+  },
+  {
+    "time": "time-pre-market",
+    "name": "LSI Industries Inc.",
+    "marketCap": "$579,086,078",
+    "fiscalQuarterEnding": "Jun/2025",
+    "epsForecast": "$0.17",
+    "noOfEsts": "1",
+    "lastYearRptDt": "8/15/2024",
+    "lastYearEPS": "$0.19",
+    "report_date": "2025-08-21"
+  }
+]

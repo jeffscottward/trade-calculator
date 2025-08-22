@@ -1,0 +1,117 @@
+## Earnings Trading System - Web-Based UI Transformation
+
+### Project Overview
+Transform the existing Python-based earnings volatility trading system into a modern web-based application with React/Next.js frontend, comprehensive earnings calendar functionality, and improved API integration options.
+
+### Current State
+- Python-based GUI using FreeSimpleGUI for manual trade calculations
+- Automated earnings scanner using Alpha Vantage API
+- Interactive Brokers integration for trade execution
+- PostgreSQL database (Neon) for data storage
+- Command-line based interaction for most operations
+
+### Desired Future State
+- Modern React/Next.js web interface replacing Python GUI
+- Full-featured earnings calendar with daily/monthly views
+- Real-time stock earnings data display with interactive tables
+- One-click trade analysis for any stock
+- Flexible broker API support (IB vs Composer.trade)
+- AGNO app backend for advanced LLM-powered querying
+- Maintained Python backend for core trading logic
+
+### Key Requirements
+
+#### Frontend Requirements
+- Clone and integrate t-stack-base repository as foundation
+- Calendar component with:
+  - Current day highlighted on page load
+  - Click any day to see earnings for that date
+  - Month-by-month navigation
+  - Visual indicators for earnings days
+- Earnings table below calendar showing:
+  - Stock ticker/name
+  - Reporting time (before market/after market)
+  - Play button for instant analysis
+  - Key metrics preview
+- Fuzzy search functionality for quick stock lookup
+- Responsive design for desktop and mobile
+
+#### Backend Requirements
+- Maintain existing Python trading logic as API endpoints
+- Support multiple broker APIs (Interactive Brokers, Composer.trade)
+- AGNO app integration for advanced queries
+- Real-time data fetching from multiple sources
+- WebSocket support for live updates
+
+#### Data Requirements
+- Complete earnings calendar data source
+- Historical earnings data for backtesting
+- Real-time options chain data
+- Volatility metrics calculation
+- Performance tracking and analytics
+
+### Technical Specifications
+
+#### Technology Stack
+- Frontend: Next.js, React, TypeScript, Tailwind CSS
+- Backend: Python FastAPI for existing logic
+- Database: PostgreSQL (Neon)
+- Broker APIs: IB Client Portal, Composer.trade API
+- LLM Integration: AGNO app backend
+- Deployment: Vercel/Railway for frontend, Cloud Run for backend
+
+#### API Design
+- RESTful endpoints for CRUD operations
+- WebSocket for real-time updates
+- GraphQL consideration for complex queries
+- Rate limiting and caching strategies
+
+### User Stories
+
+1. As a trader, I want to see today's earnings on page load so I can quickly identify opportunities
+2. As a trader, I want to click any calendar day to see that day's earnings events
+3. As a trader, I want to search for specific stocks to find their earnings dates
+4. As a trader, I want to run trade analysis with one click from the earnings table
+5. As a trader, I want to see reporting times (BMO/AMC) for proper trade timing
+6. As a trader, I want to navigate months ahead to plan future trades
+7. As a trader, I want the system to work with my preferred broker API
+
+### Migration Plan
+
+1. Set up Next.js frontend with t-stack-base
+2. Create earnings calendar component
+3. Build earnings data table with search
+4. Connect Python backend via API endpoints
+5. Implement broker API abstraction layer
+6. Add AGNO backend for advanced features
+7. Update documentation and deployment scripts
+8. Maintain parallel operation during transition
+
+### Success Criteria
+
+- Web UI fully replaces Python GUI for daily operations
+- Calendar displays accurate earnings data for any selected date
+- One-click analysis matches current calculator.py functionality
+- System supports both IB and Composer.trade APIs
+- Search finds any stock within 2 seconds
+- Documentation updated for new architecture
+- All existing automated features continue working
+
+### Risk Mitigation
+
+- Keep Python GUI operational during transition
+- Implement feature flags for gradual rollout
+- Extensive testing with paper trading accounts
+- Backup data sources for earnings information
+- API abstraction to avoid vendor lock-in
+
+### Timeline Estimate
+
+- Phase 1 (Frontend Setup): 2-3 days
+- Phase 2 (Calendar & Table): 3-4 days
+- Phase 3 (Backend Integration): 2-3 days
+- Phase 4 (Broker API Decision): 1-2 days
+- Phase 5 (AGNO Integration): 2-3 days
+- Phase 6 (Testing & Documentation): 2-3 days
+
+Total estimated timeline: 2-3 weeks for full implementation

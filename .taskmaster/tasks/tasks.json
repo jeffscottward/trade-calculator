@@ -1,0 +1,171 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Initialize Next.js Frontend with t-stack-base",
+        "description": "Clone and configure the t-stack-base repository as the foundation for the new web interface",
+        "details": "1. Clone t-stack-base from GitHub\n2. Install dependencies: npm install\n3. Configure TypeScript, Tailwind CSS, and Next.js settings\n4. Set up environment variables for API endpoints\n5. Create initial folder structure: /components, /lib, /types, /hooks\n6. Configure ESLint and Prettier for code consistency\n7. Set up Vercel deployment configuration",
+        "testStrategy": "Verify successful local development server startup, confirm TypeScript compilation, and validate deployment to Vercel preview",
+        "priority": "high",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 2,
+        "title": "Create PostgreSQL Database Schema",
+        "description": "Design and implement database schema for earnings data, stocks, and trade history",
+        "details": "1. Create tables: earnings_events (id, ticker, date, time, company_name, created_at, updated_at), stocks (ticker, company_name, sector, market_cap), trades (id, ticker, earnings_date, strategy, entry_price, exit_price, pnl, created_at)\n2. Set up indexes on date and ticker for fast queries\n3. Create migration scripts using Prisma or raw SQL\n4. Seed database with sample earnings data for testing\n5. Configure Neon database connection strings for dev/staging/prod",
+        "testStrategy": "Run migration scripts successfully, verify data insertion and retrieval, test query performance with 1000+ records",
+        "priority": "high",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 3,
+        "title": "Build Earnings Calendar Component",
+        "description": "Implement interactive calendar with month navigation and earnings day indicators",
+        "details": "1. Create Calendar component using react-calendar or custom implementation\n2. Implement date navigation (previous/next month buttons)\n3. Highlight current day on load using new Date()\n4. Add visual indicators (dots/badges) for days with earnings\n5. Style with Tailwind CSS for responsive design\n6. Implement click handler to trigger earnings data fetch for selected date\n7. Add keyboard navigation support (arrow keys, enter/space)",
+        "testStrategy": "Test calendar renders correctly, verify date navigation works, confirm earnings indicators appear, test responsive behavior on mobile",
+        "priority": "high",
+        "dependencies": [
+          1
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 4,
+        "title": "Create Earnings Data API Endpoints",
+        "description": "Build FastAPI endpoints for earnings calendar data retrieval",
+        "details": "1. Create GET /api/earnings?date=YYYY-MM-DD endpoint\n2. Implement GET /api/earnings/range?start=YYYY-MM-DD&end=YYYY-MM-DD\n3. Add GET /api/stocks/search?q=query for fuzzy search\n4. Implement caching with Redis for frequent queries\n5. Add rate limiting (100 requests/minute per IP)\n6. Create Pydantic models for request/response validation\n7. Add error handling for invalid dates and API failures",
+        "testStrategy": "Test all endpoints with curl/Postman, verify response formats, test caching behavior, validate rate limiting",
+        "priority": "high",
+        "dependencies": [
+          2
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 5,
+        "title": "Implement Earnings Table Component",
+        "description": "Build interactive table displaying earnings data with search and analysis capabilities",
+        "details": "1. Create DataTable component using TanStack Table\n2. Display columns: ticker, company name, reporting time (BMO/AMC), market cap, preview metrics\n3. Add sorting by ticker, date, market cap\n4. Implement fuzzy search with fuse.js for real-time filtering\n5. Add 'Analyze' button with play icon for each row\n6. Implement infinite scroll for large datasets\n7. Add loading states and error boundaries",
+        "testStrategy": "Test table renders 100+ rows efficiently, verify search filters correctly, test sorting functionality, confirm analyze button triggers correct action",
+        "priority": "high",
+        "dependencies": [
+          1,
+          3,
+          4
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 6,
+        "title": "Integrate Alpha Vantage API for Real-time Data",
+        "description": "Connect to Alpha Vantage API for live earnings and stock data",
+        "details": "1. Create AlphaVantage service class with methods: getEarningsCalendar(), getStockQuote(), getCompanyOverview()\n2. Implement API key management and rotation\n3. Add retry logic with exponential backoff\n4. Cache responses for 15 minutes to reduce API calls\n5. Create fallback to database if API is unavailable\n6. Add error handling for rate limits and API errors\n7. Log all API calls for monitoring",
+        "testStrategy": "Test API integration with real calls, verify caching works, simulate API failures and test fallback behavior",
+        "priority": "medium",
+        "dependencies": [
+          4
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 7,
+        "title": "Build Trade Analysis Engine",
+        "description": "Create Python service for earnings volatility analysis and trade recommendations",
+        "details": "1. Port existing calculator.py logic to FastAPI service\n2. Create POST /api/analyze endpoint accepting {ticker, earnings_date}\n3. Implement volatility calculation using historical data\n4. Add options chain analysis for strike selection\n5. Create risk/reward calculation engine\n6. Generate trade recommendations with confidence scores\n7. Cache analysis results for 1 hour",
+        "testStrategy": "Test analysis with known stocks (AAPL, TSLA), verify calculations match Python GUI, test edge cases like low-volume stocks",
+        "priority": "high",
+        "dependencies": [
+          4
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 8,
+        "title": "Implement Broker API Abstraction Layer",
+        "description": "Create unified interface for Interactive Brokers and Composer.trade APIs",
+        "details": "1. Design IBroker interface with methods: connect(), placeOrder(), getPositions(), getAccountInfo()\n2. Implement IBClientPortal adapter for Interactive Brokers\n3. Implement ComposerTrade adapter for Composer.trade API\n4. Create factory pattern for broker selection based on config\n5. Add paper trading mode toggle\n6. Implement order validation before submission\n7. Add comprehensive logging for all broker interactions",
+        "testStrategy": "Test both broker connections with paper trading, verify order placement, test error handling for connection failures",
+        "priority": "medium",
+        "dependencies": [
+          7
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 9,
+        "title": "Create AGNO Backend Integration",
+        "description": "Build AGNO app backend for advanced LLM-powered querying",
+        "details": "1. Set up AGNO app with FastAPI backend\n2. Create natural language query endpoints: POST /api/query with {question}\n3. Implement context building with earnings data, trade history, market conditions\n4. Add conversation memory for follow-up questions\n5. Create prompt templates for common queries\n6. Implement response streaming for better UX\n7. Add query cost tracking and rate limiting",
+        "testStrategy": "Test natural language queries like 'Show me high volatility plays for next week', verify context accuracy, test streaming responses",
+        "priority": "medium",
+        "dependencies": [
+          4,
+          7
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 10,
+        "title": "Implement WebSocket for Real-time Updates",
+        "description": "Add WebSocket support for live earnings updates and trade notifications",
+        "details": "1. Set up WebSocket server with FastAPI\n2. Create connection manager for handling multiple clients\n3. Implement real-time earnings updates when new data arrives\n4. Add trade execution notifications\n5. Create subscription system for specific tickers\n6. Implement reconnection logic with exponential backoff\n7. Add heartbeat mechanism for connection health",
+        "testStrategy": "Test multiple simultaneous connections, verify real-time updates, test reconnection after network failure",
+        "priority": "medium",
+        "dependencies": [
+          4,
+          6
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 11,
+        "title": "Create Responsive Design and Mobile Support",
+        "description": "Ensure full mobile responsiveness and touch-friendly interactions",
+        "details": "1. Implement responsive calendar with swipe gestures for month navigation\n2. Create mobile-optimized earnings table with card-based layout\n3. Add touch-friendly buttons and interactive elements\n4. Implement pull-to-refresh for earnings data\n5. Optimize for different screen sizes (320px to 1920px)\n6. Add PWA capabilities (manifest.json, service worker)\n7. Test on iOS Safari, Android Chrome, and desktop browsers",
+        "testStrategy": "Test on actual mobile devices, verify touch interactions, test PWA installation, validate responsive breakpoints",
+        "priority": "medium",
+        "dependencies": [
+          3,
+          5
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 12,
+        "title": "Setup Production Deployment and Monitoring",
+        "description": "Configure production deployment with monitoring and rollback capabilities",
+        "details": "1. Set up Vercel deployment for frontend with GitHub Actions\n2. Configure Cloud Run deployment for Python backend\n3. Implement health check endpoints for all services\n4. Add error tracking with Sentry for frontend and backend\n5. Create monitoring dashboard with key metrics (API latency, error rates, active users)\n6. Set up automated rollback on deployment failure\n7. Create runbooks for common issues and recovery procedures",
+        "testStrategy": "Test deployment pipeline with feature branch, verify rollback works, test error tracking with deliberate errors",
+        "priority": "low",
+        "dependencies": [
+          1,
+          4,
+          7,
+          8
+        ],
+        "status": "pending",
+        "subtasks": []
+      }
+    ],
+    "metadata": {
+      "created": "2025-08-21T23:19:00.050Z",
+      "updated": "2025-08-21T23:27:21.980Z",
+      "description": "Tasks for master context"
+    }
+  }
+}

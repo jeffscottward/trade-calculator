@@ -1,0 +1,25 @@
+# Crontab configuration for automated earnings data updates
+# Add these lines to your crontab using: crontab -e
+
+# Update earnings data daily at 6 AM Eastern Time
+# This ensures fresh data is available before market open
+0 6 * * * /Users/jeffscottward/Documents/GitHub/trading/trade-calculator/scripts/update_earnings_data.sh
+
+# Alternative: Update twice daily (6 AM and 6 PM) for more frequent updates
+# 0 6,18 * * * /Users/jeffscottward/Documents/GitHub/trading/trade-calculator/scripts/update_earnings_data.sh
+
+# Weekly full refresh on Sunday at 2 AM
+# This does a larger import to catch any missed data
+0 2 * * 0 /Users/jeffscottward/Documents/GitHub/trading/trade-calculator/venv/bin/python /Users/jeffscottward/Documents/GitHub/trading/trade-calculator/automation/earnings_data_importer.py --days 60
+
+# To set up:
+# 1. Run: crontab -e
+# 2. Copy the desired schedule lines above
+# 3. Update the paths to match your installation
+# 4. Save and exit
+
+# To verify cron is set up:
+# crontab -l
+
+# To monitor logs:
+# tail -f /Users/jeffscottward/Documents/GitHub/trading/trade-calculator/logs/earnings_update.log

@@ -10,9 +10,28 @@ Automated earnings volatility trading system that sells calendar spreads around 
 
 **NEVER expose credentials in code**. All sensitive data must be in `.env` file (gitignored). Check `.env.example` for required variables.
 
+## Debugging Conventions
+
+### Console Logging Format
+Always use this format for browser console logs:
+```javascript
+console.log(
+  "🚀 ~ file: filename:linenumber → functionName → variableName:",
+  variable
+);
+```
+
+### Playwright MCP
+Always run Playwright MCP in headless mode unless a visible browser is specifically required for the task:
+```bash
+playwright-mcp --headless
+```
+Note: Some tasks may require a visible browser (e.g., visual debugging, user interaction testing)
+
 ## Key Commands
 
 ### Environment Setup
+
 ```bash
 # Create and activate virtual environment
 python -m venv venv
@@ -26,7 +45,24 @@ cp .env.example .env
 # Edit .env with actual credentials
 ```
 
+### Package Manager
+
+**IMPORTANT**: Always use `pnpm` instead of `npm` for all JavaScript/Node.js package management tasks:
+- Install: `pnpm install` (not npm install)
+- Add packages: `pnpm add <package>` (not npm install <package>)
+- Run scripts: `pnpm run <script>` (not npm run <script>)
+- Execute packages: `pnpm exec` or `pnpx` (not npx)
+
+### UI Components
+
+**IMPORTANT**: Always use shadcn/ui components when available:
+- Check if a shadcn component exists before using external libraries
+- Use `pnpx shadcn@latest add <component>` to add new shadcn components
+- shadcn components automatically handle dark mode theming
+- Prefer shadcn over libraries like react-calendar, react-select, etc.
+
 ### Running Components
+
 ```bash
 # Manual trade calculator GUI
 python calculator.py
@@ -47,6 +83,7 @@ python scripts/run_with_debug.py
 ```
 
 ### Database Setup
+
 ```bash
 # Initialize Neon DB schema
 python automation/database/init_db.py
@@ -57,18 +94,21 @@ python automation/database/init_db.py
 ### System Components
 
 **automation/** - Core automated trading modules
-- `earnings_scanner.py`: Daily scan for qualifying earnings events (Alpha Vantage API)
+
+- `earnings_scanner.py`: Daily scan for qualifying earnings events (NASDAQ API)
 - `trade_executor.py`: Interactive Brokers order execution engine
 - `position_manager.py`: Entry/exit timing automation (15 min before close/after open)
 - `risk_monitor.py`: Portfolio limits and drawdown protection
 - `config.py`: Central configuration (loads from .env)
 
 **calculator.py** - Manual trade analysis GUI
+
 - Uses Yang-Zhang volatility for accurate option pricing
 - Analyzes term structure slope for trade qualification
 - Threading model prevents UI freezes during API calls
 
 **scripts/tkinter_fix.py** - Critical Python 3.13+ compatibility
+
 - Must be imported before FreeSimpleGUI
 - Patches tkinter trace method API changes
 
@@ -79,7 +119,7 @@ python automation/database/init_db.py
    - 30-day average volume > 1M shares
    - IV/RV ratio > 1.2
 
-2. **Position Sizing**: 
+2. **Position Sizing**:
    - 6% of portfolio per trade (10% Kelly criterion)
    - Maximum 3 concurrent positions
    - 20% max total exposure
@@ -92,6 +132,7 @@ python automation/database/init_db.py
 ### Database Schema (Neon DB PostgreSQL)
 
 Key tables:
+
 - `earnings_events`: Tracks scanned earnings with qualification metrics
 - `trades`: Records all positions with entry/exit prices and P&L
 - `performance_metrics`: Daily performance statistics
@@ -100,21 +141,24 @@ Uses PostgreSQL-specific features: SERIAL ids, TIMESTAMP WITH TIME ZONE, trigger
 
 ### External APIs
 
-**Alpha Vantage**: Earnings calendar (500 calls/day free tier)
+**NASDAQ**: Earnings calendar (free, no API key required, better quality US stocks)
 **Yahoo Finance**: Real-time options chains and volatility
 **Interactive Brokers**: Order execution and market data backup
 **IB Client Portal API**: REST API for account data and trading (port 5001)
-  - Documentation: https://www.interactivebrokers.com/campus/ibkr-api-page/cpapi-v1/#introduction
+
+- Documentation: <https://www.interactivebrokers.com/campus/ibkr-api-page/cpapi-v1/#introduction>
 
 ## Development Workflow
 
 ### Adding New Features
+
 1. Update relevant module in `automation/`
 2. Add database migrations if schema changes needed
 3. Update risk limits in `config.py` if necessary
 4. Test with paper trading account first (port 7497)
 
 ### Debugging Issues
+
 - Check `logs/` folder for detailed debug output
 - Yahoo Finance 429 errors: Wait 1-2 minutes or use `python scripts/test_yfinance.py`
 - IB connection issues: Ensure TWS/Gateway running on correct port
@@ -135,6 +179,7 @@ Uses PostgreSQL-specific features: SERIAL ids, TIMESTAMP WITH TIME ZONE, trigger
 ## Broker Configuration
 
 Using **Interactive Brokers Pro** account (not Lite) for:
+
 - Unrestricted API access
 - Better execution for options
 - No rejection of automated orders
@@ -143,4 +188,8 @@ Using **Interactive Brokers Pro** account (not Lite) for:
 
 - System Design: `docs/SYSTEM_DESIGN.md`
 - Strategy Research: `docs/Earnings Research.pdf`
-- Discord Support: https://discord.gg/krdByJHuHc
+- Discord Support: <https://discord.gg/krdByJHuHc>
+
+## Task Master AI Instructions
+**Import Task Master's development workflow commands and guidelines, treat as if import is in the main CLAUDE.md file.**
+@./.taskmaster/CLAUDE.md

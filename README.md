@@ -1,6 +1,6 @@
 # Automated Earnings Volatility Trading System
 
-An automated options trading system that sells volatility around earnings events using calendar spreads, with Interactive Brokers integration for execution.
+An automated options trading system that sells volatility around earnings events using calendar spreads. Features a modern web-based interface for analyzing earnings opportunities and executing trades through multiple broker APIs.
 
 ## 📺 Video Tutorial
 
@@ -17,7 +17,9 @@ Join our Discord community for help and discussions:
 ### Prerequisites
 
 - Python 3.10+ (tested on 3.10.11, now compatible with 3.13+)
+- Node.js 18+ and pnpm package manager
 - pip package manager
+- PostgreSQL database (using Neon cloud DB)
 
 ### Installation
 
@@ -38,7 +40,26 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### Running the Calculator
+### Running the Application
+
+#### Web Interface (Primary)
+
+```bash
+# Navigate to frontend directory
+cd frontend
+
+# Install dependencies (first time only)
+pnpm install
+
+# Start the development server
+pnpm run dev
+```
+
+The web interface will be available at:
+- Frontend: http://localhost:3001
+- Backend API: http://localhost:3000
+
+#### Python Calculator (Legacy)
 
 ```bash
 python calculator.py
@@ -89,15 +110,23 @@ This system implements a systematic approach to selling earnings volatility thro
 
 ## 🛠️ Features
 
+### Web Interface (New)
+- **Interactive Earnings Calendar**: Visual calendar with earnings highlights
+- **Daily Earnings Table**: View all stocks reporting on any selected date
+- **Fuzzy Search**: Quickly find specific stocks across all earnings dates
+- **One-Click Analysis**: Analyze any stock with a single click
+- **Report Time Display**: See whether earnings are BMO (Before Market Open) or AMC (After Market Close)
+- **Modern Tech Stack**: Built with Next.js, React, TypeScript, and Tailwind CSS
+
 ### Current Features
 - **Black-Scholes Options Pricing**: Accurate theoretical options pricing
 - **Yang-Zhang Volatility**: Advanced volatility calculation for better accuracy
 - **Real-time Data**: Live market data from Yahoo Finance
-- **GUI Interface**: User-friendly interface built with FreeSimpleGUI
+- **GUI Interface**: Legacy Python interface built with FreeSimpleGUI
 - **Trade Qualification**: Analyzes term structure, volume, and IV/RV ratios
 
 ### Automation Features
-- **Automated Scanning**: Daily earnings event detection via Alpha Vantage API
+- **Automated Scanning**: Daily earnings event detection via NASDAQ API (free, no key required)
 - **Interactive Brokers Integration**: Automated order execution via TWS/Gateway API
 - **IB Client Portal API**: REST API for account data and trading (port 5001)
 - **Position Management**: Automatic entry 15 min before close, exit 15 min after open
@@ -122,7 +151,7 @@ After researching multiple broker APIs, we've selected **Interactive Brokers** f
 
 ### Data Sources
 
-- **Earnings Calendar**: Alpha Vantage (500 free API calls/day)
+- **Earnings Calendar**: NASDAQ (free, no API key required)
 - **Market Data**: Yahoo Finance via yfinance library
 - **Backup Data**: Interactive Brokers real-time feed
 - **IB Client Portal API**: REST API documentation at [IB Campus](https://www.interactivebrokers.com/campus/ibkr-api-page/cpapi-v1/#introduction)

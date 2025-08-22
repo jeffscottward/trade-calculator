@@ -12,7 +12,7 @@ import pandas as pd
 from typing import List, Dict, Optional
 import time
 
-from config import DATA_CONFIG, STRATEGY_CONFIG
+from config import STRATEGY_CONFIG
 from database.db_manager import DatabaseManager
 from utils.volatility import calculate_yang_zhang, calculate_iv_rv_ratio
 from utils.options_analysis import analyze_term_structure
@@ -26,42 +26,49 @@ class EarningsScanner:
     
     def __init__(self):
         self.db = DatabaseManager()
-        self.alpha_vantage_key = DATA_CONFIG['alpha_vantage_key']
         self.strategy_config = STRATEGY_CONFIG
         
     def fetch_earnings_calendar(self) -> List[Dict]:
-        """Fetch earnings calendar from Alpha Vantage."""
-        if not self.alpha_vantage_key:
-            logger.error("Alpha Vantage API key not configured")
-            return []
+        """Fetch earnings calendar from NASDAQ (free, no API key required)."""
+        # Get tomorrow's date
+        tomorrow = (datetime.now() + timedelta(days=1))
+        date_str = tomorrow.strftime('%Y-%m-%d')
         
-        url = 'https://www.alphavantage.co/query'
-        params = {
-            'function': 'EARNINGS_CALENDAR',
-            'horizon': DATA_CONFIG['earnings_horizon'],
-            'apikey': self.alpha_vantage_key
+        url = f"https://api.nasdaq.com/api/calendar/earnings"
+        
+        # Headers to mimic browser request
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': 'application/json, text/plain, */*',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Origin': 'https://www.nasdaq.com',
+            'Referer': 'https://www.nasdaq.com/'
         }
         
+        params = {'date': date_str}
+        
         try:
-            response = requests.get(url, params=params)
+            response = requests.get(url, headers=headers, params=params)
             response.raise_for_status()
             
-            # Alpha Vantage returns CSV for earnings calendar
-            import io
-            import csv
+            data = response.json()
+            tomorrow_earnings = []
             
-            csv_data = io.StringIO(response.text)
-            reader = csv.DictReader(csv_data)
-            earnings = list(reader)
+            if 'data' in data and 'rows' in data['data']:
+                for row in data['data']['rows']:
+                    # Filter out OTC/foreign stocks
+                    ticker = row.get('symbol', '')
+                    if ticker and not ticker.endswith('F') and not ticker.endswith('Y'):
+                        tomorrow_earnings.append({
+                            'symbol': ticker,
+                            'reportDate': date_str,
+                            'companyName': row.get('name', ''),
+                            'reportTime': row.get('time', 'TBD'),
+                            'marketCap': row.get('marketCap', ''),
+                            'estimate': row.get('epsForecast', ''),
+                        })
             
-            # Filter for tomorrow's earnings
-            tomorrow = (datetime.now() + timedelta(days=1)).date()
-            tomorrow_earnings = [
-                e for e in earnings 
-                if datetime.strptime(e['reportDate'], '%Y-%m-%d').date() == tomorrow
-            ]
-            
-            logger.info(f"Found {len(tomorrow_earnings)} earnings events for tomorrow")
+            logger.info(f"Found {len(tomorrow_earnings)} earnings events for tomorrow from NASDAQ")
             return tomorrow_earnings
             
         except Exception as e:
@@ -226,11 +233,6 @@ class EarningsScanner:
 def main():
     """Main function to run the earnings scanner."""
     scanner = EarningsScanner()
-    
-    # Check if Alpha Vantage key is configured
-    if not scanner.alpha_vantage_key:
-        logger.error("Alpha Vantage API key not configured. Set ALPHA_VANTAGE_KEY in .env")
-        return
     
     # Run the scan
     qualified_trades = scanner.scan_and_store()
