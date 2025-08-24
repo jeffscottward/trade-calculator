@@ -28,6 +28,12 @@ class EarningsScanner:
         self.db = DatabaseManager()
         self.strategy_config = STRATEGY_CONFIG
         
+    def get_upcoming_earnings(self, days_ahead: int = 1) -> List[Dict]:
+        """Get upcoming earnings for the next N days."""
+        # For now, just return tomorrow's earnings
+        # Could be extended to fetch multiple days
+        return self.fetch_earnings_calendar()
+    
     def fetch_earnings_calendar(self) -> List[Dict]:
         """Fetch earnings calendar from NASDAQ (free, no API key required)."""
         # Get tomorrow's date

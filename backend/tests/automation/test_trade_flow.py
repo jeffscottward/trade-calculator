@@ -105,16 +105,16 @@ def test_option_analysis(symbol):
         
         # Find optimal strikes
         logger.info("\nAnalyzing optimal strikes...")
-        strikes = find_optimal_calendar_strikes(ticker, front_expiry, back_expiry, top_n=3)
+        strikes = find_optimal_calendar_strikes(ticker, front_expiry, back_expiry, num_strikes=3)
         
         if strikes:
             logger.info(f"✅ Found {len(strikes)} optimal strikes:")
             for i, strike_info in enumerate(strikes[:3]):
                 logger.info(f"\n{i+1}. Strike: ${strike_info['strike']:.2f}")
-                logger.info(f"   Front Premium: ${strike_info['front_price']:.2f}")
-                logger.info(f"   Back Premium: ${strike_info['back_price']:.2f}")
                 logger.info(f"   Net Debit: ${strike_info['spread_price']:.2f}")
-                logger.info(f"   Liquidity Score: {strike_info['liquidity_score']:.2f}")
+                logger.info(f"   Front Volume: {strike_info.get('front_volume', 0):,}")
+                logger.info(f"   Back Volume: {strike_info.get('back_volume', 0):,}")
+                logger.info(f"   Total Volume: {strike_info.get('total_volume', 0):,}")
             
             return {
                 'symbol': symbol,
