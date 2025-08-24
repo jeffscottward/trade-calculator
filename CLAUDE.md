@@ -68,9 +68,6 @@ cp .env.example .env
 ### Running Components
 
 ```bash
-# Manual trade calculator GUI
-python calculator.py
-
 # Automated earnings scanner (runs daily at 3 PM ET via cron)
 python automation/earnings_scanner.py
 
@@ -81,9 +78,6 @@ python automation/trade_executor.py
 # Note: Configured to run on port 5001 instead of default 5000
 # Run from the clientportal.gw directory
 cd clientportal.gw/bin && ./run.sh  # On Windows: run.bat
-
-# Debug mode
-python scripts/run_with_debug.py
 ```
 
 ### Database Setup
@@ -105,16 +99,11 @@ python automation/database/init_db.py
 - `risk_monitor.py`: Portfolio limits and drawdown protection
 - `config.py`: Central configuration (loads from .env)
 
-**calculator.py** - Manual trade analysis GUI
+**api/** - FastAPI backend server
 
-- Uses Yang-Zhang volatility for accurate option pricing
-- Analyzes term structure slope for trade qualification
-- Threading model prevents UI freezes during API calls
-
-**scripts/tkinter_fix.py** - Critical Python 3.13+ compatibility
-
-- Must be imported before FreeSimpleGUI
-- Patches tkinter trace method API changes
+- Serves earnings calendar data to web frontend
+- SSE streaming for progress updates
+- NASDAQ API integration for earnings data
 
 ### Trading Strategy Rules
 
@@ -170,7 +159,6 @@ Uses PostgreSQL-specific features: SERIAL ids, TIMESTAMP WITH TIME ZONE, trigger
 ## Critical Files Not to Modify
 
 - `.env` - Contains actual credentials (local only)
-- `scripts/tkinter_fix.py` - Breaks GUI on Python 3.13+ if changed
 - Database migration files once applied
 
 ## Testing Strategy

@@ -4,13 +4,14 @@
 # Run this script to configure the cron schedule
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-PYTHON_PATH="$SCRIPT_DIR/venv/bin/python"
-MAIN_SCRIPT="$SCRIPT_DIR/automation/main.py"
+BACKEND_DIR="$(dirname "$SCRIPT_DIR")"
+PYTHON_PATH="$BACKEND_DIR/venv/bin/python"
+MAIN_SCRIPT="$SCRIPT_DIR/main.py"
 
 echo "Setting up cron jobs for automated trading system..."
 
 # Create logs directory if it doesn't exist
-mkdir -p "$SCRIPT_DIR/logs"
+mkdir -p "$BACKEND_DIR/logs"
 
 # Check if virtual environment exists
 if [ ! -f "$PYTHON_PATH" ]; then
@@ -31,19 +32,19 @@ CRON_JOBS="
 # All times in Eastern Time (ET)
 
 # Daily earnings scan - 3:00 PM ET
-0 15 * * 1-5 cd $SCRIPT_DIR && $PYTHON_PATH $MAIN_SCRIPT --action scan >> $SCRIPT_DIR/logs/cron.log 2>&1
+0 15 * * 1-5 cd $SCRIPT_DIR && $PYTHON_PATH $MAIN_SCRIPT --action scan >> $BACKEND_DIR/logs/cron.log 2>&1
 
 # Enter positions - 3:45 PM ET (15 minutes before close)
-45 15 * * 1-5 cd $SCRIPT_DIR && $PYTHON_PATH $MAIN_SCRIPT --action enter >> $SCRIPT_DIR/logs/cron.log 2>&1
+45 15 * * 1-5 cd $SCRIPT_DIR && $PYTHON_PATH $MAIN_SCRIPT --action enter >> $BACKEND_DIR/logs/cron.log 2>&1
 
 # Exit positions - 9:45 AM ET (15 minutes after open)
-45 9 * * 1-5 cd $SCRIPT_DIR && $PYTHON_PATH $MAIN_SCRIPT --action exit >> $SCRIPT_DIR/logs/cron.log 2>&1
+45 9 * * 1-5 cd $SCRIPT_DIR && $PYTHON_PATH $MAIN_SCRIPT --action exit >> $BACKEND_DIR/logs/cron.log 2>&1
 
 # Daily performance report - 6:00 PM ET
-0 18 * * 1-5 cd $SCRIPT_DIR && $PYTHON_PATH $MAIN_SCRIPT --action report >> $SCRIPT_DIR/logs/cron.log 2>&1
+0 18 * * 1-5 cd $SCRIPT_DIR && $PYTHON_PATH $MAIN_SCRIPT --action report >> $BACKEND_DIR/logs/cron.log 2>&1
 
 # System health check - Every hour during market hours
-0 10-16 * * 1-5 cd $SCRIPT_DIR && $PYTHON_PATH $MAIN_SCRIPT --action health >> $SCRIPT_DIR/logs/cron.log 2>&1
+0 10-16 * * 1-5 cd $SCRIPT_DIR && $PYTHON_PATH $MAIN_SCRIPT --action health >> $BACKEND_DIR/logs/cron.log 2>&1
 "
 
 # Add cron jobs

@@ -1,6 +1,6 @@
 """
 Analysis engine for options trading - no GUI dependencies
-Extracted from calculator.py for API usage
+Contains volatility calculations and options pricing logic.
 """
 
 import yfinance as yf

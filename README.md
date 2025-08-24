@@ -42,7 +42,19 @@ pip install -r requirements.txt
 
 ### Running the Application
 
-#### Web Interface (Primary)
+#### Quick Start (All Services)
+
+```bash
+# Start all development services with one command
+./scripts/start-dev.sh
+```
+
+This will start:
+- Next.js frontend on http://localhost:3001
+- FastAPI backend on http://localhost:3000  
+- IB Client Portal Gateway on https://localhost:5001
+
+#### Manual Start (Individual Services)
 
 ```bash
 # Navigate to frontend directory
@@ -59,17 +71,6 @@ The web interface will be available at:
 - Frontend: http://localhost:3001
 - Backend API: http://localhost:3000
 
-#### Python Calculator (Legacy)
-
-```bash
-python calculator.py
-```
-
-For debugging with detailed logs:
-```bash
-python scripts/run_with_debug.py
-```
-
 To test Yahoo Finance connection:
 ```bash
 python scripts/test_yfinance.py
@@ -85,7 +86,12 @@ cd clientportal.gw/bin
 run.bat   # On Windows
 ```
 
-Note: The gateway is configured to run on port 5001 instead of the default 5000.
+**Important Authentication Notes:**
+- The gateway runs on port 5001 (configured to avoid conflicts)
+- Browser login credentials are different from API credentials
+- Check `.env` file for `IB_BROWSER_USERNAME` for web login
+- After successful login, you'll see "Client login succeeds" on the page
+- Keep the browser tab open during your trading session
 
 ## 📚 Documentation
 
@@ -122,7 +128,6 @@ This system implements a systematic approach to selling earnings volatility thro
 - **Black-Scholes Options Pricing**: Accurate theoretical options pricing
 - **Yang-Zhang Volatility**: Advanced volatility calculation for better accuracy
 - **Real-time Data**: Live market data from Yahoo Finance
-- **GUI Interface**: Legacy Python interface built with FreeSimpleGUI
 - **Trade Qualification**: Analyzes term structure, volume, and IV/RV ratios
 
 ### Automation Features
@@ -178,18 +183,15 @@ If you encounter Yahoo Finance rate limiting (429 errors):
 
 ```
 trade-calculator/
-├── calculator.py              # Main application with GUI
 ├── requirements.txt           # Python dependencies
 ├── docs/                      # Documentation and resources
 │   ├── SYSTEM_DESIGN.md      # Automated trading system architecture
 │   ├── Earnings Research.pdf # Original strategy research
 │   ├── Earnings Tracker.xlsx # Trade tracking spreadsheet
-│   └── youtube_transcript.txt# Full strategy explanation
+│   └── yt-transcript.txt     # Full strategy explanation
 ├── scripts/                   # Utility scripts
-│   ├── calculator_debug.py   # Debug version with error tracking
-│   ├── run_with_debug.py     # Debug wrapper with detailed logging
 │   ├── test_yfinance.py      # Yahoo Finance connection tester
-│   └── tkinter_fix.py        # Python 3.13 compatibility layer
+│   └── test_finance_calendars.py # Calendar data testing
 ├── automation/                # Automated trading modules
 │   ├── earnings_scanner.py   # Daily earnings event scanner
 │   ├── trade_executor.py     # IB order execution

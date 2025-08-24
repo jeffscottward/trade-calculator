@@ -4,7 +4,7 @@ FreeSimpleGUI==5.1.1
 # Data Analysis
 numpy==2.1
 scipy==1.15.1
-pandas==2.1.4
+pandas>=2.2.0
 
 # Market Data
 yfinance==0.2.54

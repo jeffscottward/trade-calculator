@@ -15,6 +15,9 @@ from psycopg2.extras import RealDictCursor
 import logging
 import asyncio
 
+# Import database operations module
+import database_operations
+
 load_dotenv()
 
 # Configure logging
@@ -26,10 +29,11 @@ app = FastAPI(title="Earnings Calendar API")
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001"],
+    allow_origins=["http://localhost:3000", "http://localhost:3001", "http://localhost:8000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # Using NASDAQ API - free, no key required for earnings data
@@ -256,10 +260,7 @@ async def get_earnings_by_date(date_str: str, include_analysis: bool = False, fo
         include_analysis: Include trading analysis for each stock
         force_fetch: Force refresh from API even if cached (for cron jobs)
     """
-    import sys
-    import os
-    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-    from database_operations import get_cached_earnings_for_date, fetch_and_store_earnings_for_date, check_date_has_data, store_earnings_with_analysis
+    # Use database operations imported at module level
     
     logger.info(f"=== EARNINGS REQUEST for {date_str} ===")
     logger.info(f"Include analysis: {include_analysis}, Force fetch: {force_fetch}")
@@ -271,7 +272,7 @@ async def get_earnings_by_date(date_str: str, include_analysis: bool = False, fo
         # If not forcing refresh, try to get cached data first
         if not force_fetch:
             logger.info(f"Checking for cached data for {date_str}...")
-            cached_data = get_cached_earnings_for_date(date_str)
+            cached_data = database_operations.get_cached_earnings_for_date(date_str)
             if cached_data:
                 logger.info(f"✅ Found cached data for {date_str}: {len(cached_data)} records")
                 return {
@@ -284,17 +285,17 @@ async def get_earnings_by_date(date_str: str, include_analysis: bool = False, fo
                 logger.info(f"❌ No cached data found for {date_str}")
         
         # Check if we need to fetch new data
-        has_data = check_date_has_data(earnings_date)
+        has_data = database_operations.check_date_has_data(earnings_date)
         logger.info(f"Database has data for {date_str}: {has_data}")
         
         if not has_data or force_fetch:
             logger.info(f"📥 Initiating fresh fetch for {date_str}")
-            success = await fetch_and_store_earnings_for_date(date_str, force_refresh=force_fetch)
+            success = await database_operations.fetch_and_store_earnings_for_date(date_str, force_refresh=force_fetch)
             
             if success:
                 logger.info(f"✅ Successfully fetched and stored data for {date_str}")
                 # Get the newly stored data
-                cached_data = get_cached_earnings_for_date(date_str)
+                cached_data = database_operations.get_cached_earnings_for_date(date_str)
                 if cached_data:
                     logger.info(f"Returning {len(cached_data)} fresh records for {date_str}")
                     return {
@@ -861,18 +862,11 @@ async def earnings_stream_with_analysis(date_str: str):
     Server-Sent Events endpoint for real-time earnings data with analysis progress
     Combines fetching and analysis in a single streaming response
     """
-    # Import database function at endpoint level
-    import sys
-    import os
-    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-    from database_operations import store_earnings_with_analysis
-    
     async def generate() -> AsyncGenerator[str, None]:
         try:
             # Check for cached data first
-            from database_operations import get_cached_earnings_for_date
             logger.info(f"SSE endpoint called for {date_str}, checking cache...")
-            cached_data = get_cached_earnings_for_date(date_str)
+            cached_data = database_operations.get_cached_earnings_for_date(date_str)
             
             if cached_data:
                 # Return cached data immediately
@@ -966,8 +960,7 @@ async def earnings_stream_with_analysis(date_str: str):
             
             # Store in database
             try:
-                from database_operations import store_earnings_with_analysis
-                await store_earnings_with_analysis(date_str, analyzed_earnings)
+                await database_operations.store_earnings_with_analysis(date_str, analyzed_earnings)
                 logger.info(f"Successfully stored {len(analyzed_earnings)} earnings for {date_str}")
             except Exception as store_error:
                 logger.error(f"Failed to store earnings data: {store_error}")
@@ -992,6 +985,9 @@ async def earnings_stream_with_analysis(date_str: str):
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
             "X-Accel-Buffering": "no",  # Disable nginx buffering
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET",
+            "Access-Control-Allow-Headers": "*",
         }
     )
 
