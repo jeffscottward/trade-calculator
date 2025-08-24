@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, memo } from 'react'
 import { Calendar } from '@/components/ui/calendar'
 import { format, startOfDay } from 'date-fns'
 
@@ -10,7 +10,7 @@ interface EarningsCalendarProps {
   maxDate?: Date
 }
 
-export function EarningsCalendar({ onDateSelect, earningsDates = [], maxDate }: EarningsCalendarProps) {
+export const EarningsCalendar = memo(function EarningsCalendar({ onDateSelect, earningsDates = [], maxDate }: EarningsCalendarProps) {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
 
   useEffect(() => {
@@ -62,4 +62,4 @@ export function EarningsCalendar({ onDateSelect, earningsDates = [], maxDate }: 
       className="rounded-md border w-fit [&_td]:h-9 [&_tbody_button]:h-8 [&_tbody_button]:w-8 [&_tbody_button]:text-sm [&_tbody_button]:font-medium [&_.rdp-button_previous]:!h-8 [&_.rdp-button_previous]:!w-8 [&_.rdp-button_next]:!h-8 [&_.rdp-button_next]:!w-8"
     />
   )
-}
+})

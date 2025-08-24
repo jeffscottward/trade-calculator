@@ -5,7 +5,7 @@ Transform the existing Python-based earnings volatility trading system into a mo
 
 ### Current State
 - Python-based GUI using FreeSimpleGUI for manual trade calculations
-- Automated earnings scanner using Alpha Vantage API
+- Automated earnings scanner using NASDAQ API
 - Interactive Brokers integration for trade execution
 - PostgreSQL database (Neon) for data storage
 - Command-line based interaction for most operations

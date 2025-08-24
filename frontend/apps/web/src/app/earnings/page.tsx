@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useEffect, useMemo, Suspense } from 'react'
 import { format, parseISO, isValid, addMonths, subWeeks } from 'date-fns'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { EarningsCalendar } from '@/components/earnings-calendar'
@@ -14,7 +14,7 @@ import { StockNewsFeed } from '@/components/stock-news-feed'
 
 // Removed mock data - only using real data from API/database
 
-export default function EarningsPage() {
+function EarningsPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   
@@ -25,19 +25,29 @@ export default function EarningsPage() {
     return subWeeks(twoMonthsForward, 1)
   }, [])
   
-  // Initialize date from URL parameter or use current date
-  const getInitialDate = () => {
-    const dateParam = searchParams.get('date')
+  // Get date from URL parameter
+  const dateParam = searchParams.get('date')
+  
+  // Redirect to current date if no date parameter is provided
+  useEffect(() => {
+    if (!dateParam) {
+      const currentDate = new Date()
+      const currentDateStr = format(currentDate, 'yyyy-MM-dd')
+      router.replace(`/earnings?date=${currentDateStr}`)
+    }
+  }, [dateParam, router])
+  
+  const selectedDate = useMemo(() => {
     if (dateParam) {
       const parsedDate = parseISO(dateParam)
       if (isValid(parsedDate)) {
         return parsedDate
       }
     }
+    // Fallback to current date while redirect is happening
     return new Date()
-  }
+  }, [dateParam])
   
-  const [selectedDate, setSelectedDate] = useState<Date>(getInitialDate())
   const [earningsDates, setEarningsDates] = useState<Date[]>([])
   const prefetchEarnings = usePrefetchEarnings()
   
@@ -70,27 +80,6 @@ export default function EarningsPage() {
     }
   }, [])
   
-  // Memoize the date parameter to prevent unnecessary re-renders
-  const dateParam = useMemo(() => searchParams.get('date'), [searchParams])
-  
-  // Sync selected date with URL parameter and validate range
-  useEffect(() => {
-    if (dateParam) {
-      const parsedDate = parseISO(dateParam)
-      if (isValid(parsedDate)) {
-        if (parsedDate > DYNAMIC_CUTOFF) {
-          toast.error("Data not available beyond 2 months from current date")
-          const currentDate = new Date()
-          router.replace(`/earnings?date=${format(currentDate, 'yyyy-MM-dd')}`)
-          setSelectedDate(currentDate)
-        } else {
-          // Update selected date to match URL
-          setSelectedDate(parsedDate)
-        }
-      }
-    }
-  }, [dateParam, router])
-  
   // Use React Query for earnings data
   const { 
     data: earningsData = [], 
@@ -99,11 +88,7 @@ export default function EarningsPage() {
     isStreaming 
   } = useEarningsQuery(selectedDate, {
     onProgress: (progress) => {
-      if (progress.type === 'progress') {
-        console.log(
-          `🚀 ~ file: page.tsx:45 → Analysis progress: ${progress.ticker} (${progress.current}/${progress.total})`
-        )
-      }
+      // Progress updates handled by the hook internally
     }
   })
   
@@ -132,7 +117,7 @@ export default function EarningsPage() {
           setEarningsDates(dates)
         }
       } catch (error) {
-        console.error('🚀 ~ file: page.tsx:40 → fetchEarningsDates → error:', error)
+        console.error('Failed to fetch earnings dates:', error)
       }
     }
     
@@ -141,21 +126,23 @@ export default function EarningsPage() {
 
 
   const handleDateSelect = useCallback((date: Date) => {
-    // Check if date is beyond dynamic cutoff (2 months - 1 week)
+    // Check if date is beyond dynamic cutoff (2 months - 1 week) and show warning
     if (date > DYNAMIC_CUTOFF) {
-      toast.error("Data not available beyond 2 months from current date")
-      return
+      toast.warning("Data may not be available beyond 2 months from current date")
     }
     
-    // Only update if date is different to prevent unnecessary re-renders
-    const currentDateStr = format(selectedDate, 'yyyy-MM-dd')
+    // Save current scroll position before updating
+    const currentScrollY = window.scrollY
+    
+    // Update URL with new date
     const newDateStr = format(date, 'yyyy-MM-dd')
+    router.replace(`/earnings?date=${newDateStr}`, { scroll: false })
     
-    if (currentDateStr !== newDateStr) {
-      setSelectedDate(date)
-      router.push(`/earnings?date=${newDateStr}`)
-    }
-  }, [router, selectedDate])
+    // Restore scroll position after a small delay to ensure DOM has updated
+    setTimeout(() => {
+      window.scrollTo(0, currentScrollY)
+    }, 0)
+  }, [DYNAMIC_CUTOFF, router])
   
   // Prefetch adjacent dates for smoother navigation
   const handleDateHover = useCallback((date: Date) => {
@@ -182,16 +169,16 @@ export default function EarningsPage() {
               <CardTitle>Select Date</CardTitle>
             </CardHeader>
             <CardContent>
+              <div className="mb-4 p-3 bg-muted rounded-lg">
+                <p className="text-sm font-medium">
+                  Selected: {format(selectedDate, 'MMMM d, yyyy')}
+                </p>
+              </div>
               <EarningsCalendar 
                 onDateSelect={handleDateSelect}
                 earningsDates={earningsDates}
                 maxDate={DYNAMIC_CUTOFF}
               />
-              <div className="mt-4 p-3 bg-muted rounded-lg">
-                <p className="text-sm font-medium">
-                  Selected: {format(selectedDate, 'MMMM d, yyyy')}
-                </p>
-              </div>
             </CardContent>
           </Card>
         </div>
@@ -333,5 +320,23 @@ export default function EarningsPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+// Wrap with Suspense to handle searchParams hydration
+export default function EarningsPage() {
+  return (
+    <Suspense 
+      fallback={
+        <div className="container mx-auto p-6 max-w-7xl">
+          <div className="animate-pulse">
+            <div className="h-10 bg-muted rounded w-1/3 mb-4"></div>
+            <div className="h-6 bg-muted rounded w-1/2"></div>
+          </div>
+        </div>
+      }
+    >
+      <EarningsPageContent />
+    </Suspense>
   )
 }

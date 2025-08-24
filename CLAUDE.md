@@ -6,6 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Automated earnings volatility trading system that sells calendar spreads around quarterly earnings events. Implements a systematic strategy with 66% historical win rate and 7.3% expected return per trade using Interactive Brokers API for execution.
 
+## Important Date Convention
+
+**CRITICAL**: This application operates in 2025 and beyond. NEVER use 2024 dates. The system is designed for current and future dates only (2025+). Do not implement any functionality that allows going backwards to 2024 or earlier years.
+
 ## Critical Security Note
 
 **NEVER expose credentials in code**. All sensitive data must be in `.env` file (gitignored). Check `.env.example` for required variables.

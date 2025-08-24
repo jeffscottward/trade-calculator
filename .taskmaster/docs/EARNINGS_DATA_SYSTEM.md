@@ -80,7 +80,7 @@ python automation/earnings_data_importer.py --days 60
 
 **Priority System**:
 1. First tries to fetch from database (fast, no API calls)
-2. Falls back to Alpha Vantage API if database unavailable
+2. Returns empty list if database unavailable
 3. Returns data source in response for transparency
 
 ### 5. Periodic Updates
@@ -139,7 +139,6 @@ crontab -e
 Add to `.env`:
 ```env
 DATABASE_URL=postgresql://user:password@host:port/dbname
-ALPHA_VANTAGE_KEY=your_key_here  # Optional fallback
 ```
 
 ## Data Flow
@@ -153,7 +152,7 @@ ALPHA_VANTAGE_KEY=your_key_here  # Optional fallback
    - Frontend requests earnings for date
    - API checks database first
    - Returns data immediately (no external API call)
-   - Falls back to Alpha Vantage only if DB unavailable
+   - Returns empty list if DB unavailable
 
 3. **Benefits**:
    - ✅ No API rate limiting issues

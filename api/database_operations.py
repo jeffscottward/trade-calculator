@@ -260,7 +260,9 @@ def get_cached_earnings_for_date(date_str: str) -> Optional[List[Dict]]:
                     iv_rank,
                     avg_volume_pass,
                     iv_rv_ratio_pass,
-                    term_structure_pass
+                    term_structure_pass,
+                    criteria_met,
+                    priority_score
                 FROM earnings_calendar
                 WHERE report_date = %s
                 ORDER BY recommendation ASC, ticker ASC
@@ -299,12 +301,25 @@ def get_cached_earnings_for_date(date_str: str) -> Optional[List[Dict]]:
                         except (ValueError, TypeError):
                             earning[field] = None
                 
-                # Add criteria_met for compatibility
-                earning['criteria_met'] = {
-                    'volume_check': earning.pop('avg_volume_pass', False),
-                    'iv_rv_ratio': earning.pop('iv_rv_ratio_pass', False),
-                    'term_structure': earning.pop('term_structure_pass', False)
-                }
+                # Handle criteria_met field - it's stored as JSON string in DB
+                if 'criteria_met' in earning and earning['criteria_met']:
+                    if isinstance(earning['criteria_met'], str):
+                        try:
+                            earning['criteria_met'] = json.loads(earning['criteria_met'])
+                        except:
+                            earning['criteria_met'] = {}
+                else:
+                    # Fallback to building from individual fields if criteria_met is empty
+                    earning['criteria_met'] = {
+                        'volume_check': earning.pop('avg_volume_pass', False),
+                        'iv_rv_ratio': earning.pop('iv_rv_ratio_pass', False),
+                        'term_structure': earning.pop('term_structure_pass', False)
+                    }
+                
+                # Remove the individual pass fields if they still exist
+                earning.pop('avg_volume_pass', None)
+                earning.pop('iv_rv_ratio_pass', None)
+                earning.pop('term_structure_pass', None)
                 
                 results.append(earning)
             
@@ -335,7 +350,7 @@ async def store_earnings_with_analysis(date_str: str, analyzed_earnings: List[Di
                         ticker, company_name, report_date, report_time,
                         market_cap, eps_forecast, recommendation, risk_level,
                         expected_move, position_size, iv_rank, criteria_met,
-                        priority_score, analysis_timestamp, created_at
+                        priority_score, created_at, updated_at
                     ) VALUES (
                         %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
                     )
@@ -386,8 +401,8 @@ async def store_earnings_with_analysis(date_str: str, analyzed_earnings: List[Di
                     safe_float(earning.get('iv_rank')),
                     criteria_met,
                     safe_float(earning.get('priority_score', 0.0)),
-                    datetime.now(),
-                    datetime.now()
+                    datetime.now(),  # created_at
+                    datetime.now()   # updated_at
                 )
                 
                 cursor.execute(insert_sql, values)

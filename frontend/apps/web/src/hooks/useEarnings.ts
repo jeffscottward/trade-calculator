@@ -26,18 +26,9 @@ export function useEarningsQuery(date: Date, options?: UseEarningsOptions) {
 
 	// Custom fetcher that handles SSE
 	const fetchEarnings = useCallback(async () => {
-		console.log(
-			"🚀 ~ file: useEarnings.ts:30 → fetchEarnings → Starting SSE fetch for date:",
-			dateStr
-		);
-
 		// Check if we have cached data first
 		const cachedData = queryClient.getQueryData(queryKey);
 		if (cachedData) {
-			console.log(
-				"🚀 ~ file: useEarnings.ts:37 → fetchEarnings → Using cached data:",
-				cachedData
-			);
 			return cachedData;
 		}
 
@@ -52,13 +43,11 @@ export function useEarningsQuery(date: Date, options?: UseEarningsOptions) {
 			eventSource.onmessage = (event) => {
 				try {
 					const data = JSON.parse(event.data);
-					console.log(
-						"🚀 ~ file: useEarnings.ts:54 → SSE message received:",
-						data
-					);
 
-					// Update progress state
-					setProgress(data);
+					// Only update progress state for actual progress messages
+					if (data.type === "progress") {
+						setProgress(data);
+					}
 
 					// Call optional progress callback
 					if (options?.onProgress) {
@@ -66,54 +55,34 @@ export function useEarningsQuery(date: Date, options?: UseEarningsOptions) {
 					}
 
 					// Handle different message types
-					if (data.type === "progress") {
-						console.log(
-							`🚀 ~ file: useEarnings.ts:68 → Analyzing ${data.ticker}: ${data.current}/${data.total}`
-						);
-					} else if (data.type === "complete") {
-						console.log(
-							"🚀 ~ file: useEarnings.ts:71 → Analysis complete, received data:",
-							data.earnings
-						);
+					if (data.type === "complete") {
 						finalData = data.earnings || [];
 						eventSource.close();
 						setIsStreaming(false);
 						setProgress(null);
 						resolve(finalData);
 					} else if (data.type === "cached") {
-						console.log(
-							"🚀 ~ file: useEarnings.ts:79 → Using cached data:",
-							data.earnings
-						);
 						finalData = data.earnings || [];
 						eventSource.close();
 						setIsStreaming(false);
 						setProgress(null);
 						resolve(finalData);
 					} else if (data.type === "error") {
-						console.error(
-							"🚀 ~ file: useEarnings.ts:88 → SSE error:",
-							data.message
-						);
 						eventSource.close();
 						setIsStreaming(false);
 						setProgress(null);
 						// Return empty array on error instead of rejecting
 						resolve([]);
+					} else if (data.type === "start" || data.type === "fetched") {
+						// These are status messages, don't update progress bar
+						// Silently ignore to prevent progress bar jumping
 					}
 				} catch (error) {
-					console.error(
-						"🚀 ~ file: useEarnings.ts:89 → Error parsing SSE message:",
-						error
-					);
+					// Silently handle parsing errors
 				}
 			};
 
 			eventSource.onerror = (error) => {
-				console.error(
-					"🚀 ~ file: useEarnings.ts:96 → EventSource error:",
-					error
-				);
 				eventSource.close();
 				setIsStreaming(false);
 				setProgress(null);

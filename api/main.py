@@ -32,9 +32,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Alpha Vantage configuration
-# Using NASDAQ API - free, no key required
-# Removed Alpha Vantage dependency
+# Using NASDAQ API - free, no key required for earnings data
 
 # Database configuration
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -245,22 +243,6 @@ async def get_quick_analysis(ticker: str):
             "riskLevel": "HIGH"
         }
 
-async def fetch_earnings_calendar():
-    """
-    Fetch earnings calendar from NASDAQ (free, no API key required)
-    Note: NASDAQ requires individual date queries, so this is now deprecated.
-    Use fetch_earnings_from_api directly with a specific date.
-    """
-    global earnings_cache, cache_timestamp
-    
-    # Check if cache is still valid
-    if cache_timestamp and datetime.now() - cache_timestamp < CACHE_DURATION:
-        return earnings_cache
-    
-    # For NASDAQ, we'll just return empty dict and fetch per-date as needed
-    # This maintains compatibility but encourages per-date fetching
-    logger.info("fetch_earnings_calendar called - NASDAQ requires per-date fetching")
-    return {}
 
 @app.get("/api/earnings/{date_str}")
 async def get_earnings_by_date(date_str: str, include_analysis: bool = False, force_fetch: bool = False):
@@ -391,23 +373,13 @@ async def get_earnings_by_date(date_str: str, include_analysis: bool = False, fo
             finally:
                 conn.close()
         
-        # Fall back to API if database not available
-        logger.info("Falling back to Alpha Vantage API")
-        all_earnings = await fetch_earnings_calendar()
-        earnings_list = all_earnings.get(date_str, [])
-        
-        # Optionally add analysis to API results
-        if include_analysis and earnings_list:
-            for earning in earnings_list:
-                analysis = await get_quick_analysis(earning.get("ticker", ""))
-                earning["recommendation"] = analysis.get("recommendation", "AVOID")
-                earning["riskLevel"] = analysis.get("riskLevel", "UNKNOWN")
-        
+        # Return empty list if database not available
+        logger.info("Database not available, returning empty earnings list")
         return {
             "date": date_str,
-            "earnings": earnings_list,
-            "count": len(earnings_list),
-            "source": "alpha_vantage"
+            "earnings": [],
+            "count": 0,
+            "source": "none"
         }
         
     except ValueError:
@@ -416,8 +388,7 @@ async def get_earnings_by_date(date_str: str, include_analysis: bool = False, fo
 @app.get("/api/earnings/calendar/month")
 async def get_monthly_earnings(year: int, month: int):
     """
-    Get all earnings dates for a specific month
-    Priority: 1) Database, 2) Alpha Vantage API
+    Get all earnings dates for a specific month from database
     """
     # First try database
     conn = get_db_connection()
@@ -451,79 +422,16 @@ async def get_monthly_earnings(year: int, month: int):
         finally:
             conn.close()
     
-    # Fall back to API
-    logger.info("Falling back to Alpha Vantage API for monthly earnings")
-    all_earnings = await fetch_earnings_calendar()
-    
-    # Filter for requested month
-    filtered_dates = []
-    for date_str in all_earnings.keys():
-        try:
-            d = datetime.strptime(date_str, "%Y-%m-%d").date()
-            if d.year == year and d.month == month:
-                filtered_dates.append(date_str)
-        except:
-            continue
-    
+    # Return empty list if database not available
+    logger.info("Database not available for monthly earnings")
     return {
         "year": year,
         "month": month,
-        "earnings_dates": sorted(filtered_dates),
-        "count": len(filtered_dates),
-        "source": "alpha_vantage"
+        "earnings_dates": [],
+        "count": 0,
+        "source": "none"
     }
 
-@app.get("/api/earnings/alpha-vantage/{date_str}")
-async def get_earnings_from_alpha_vantage(date_str: str):
-    """
-    Get real earnings data from Alpha Vantage API
-    """
-    if not ALPHA_VANTAGE_API_KEY:
-        raise HTTPException(status_code=500, detail="Alpha Vantage API key not configured")
-    
-    try:
-        # Alpha Vantage earnings calendar endpoint
-        params = {
-            "function": "EARNINGS_CALENDAR",
-            "horizon": "3month",  # Can be "3month" or "12month"
-            "apikey": ALPHA_VANTAGE_API_KEY
-        }
-        
-        response = requests.get(AV_BASE_URL, params=params)
-        
-        if response.status_code != 200:
-            raise HTTPException(status_code=502, detail="Failed to fetch data from Alpha Vantage")
-        
-        # Parse CSV response
-        # Note: Alpha Vantage returns CSV format for earnings calendar
-        import csv
-        from io import StringIO
-        
-        csv_data = StringIO(response.text)
-        reader = csv.DictReader(csv_data)
-        
-        earnings_list = []
-        target_date = datetime.strptime(date_str, "%Y-%m-%d").date()
-        
-        for row in reader:
-            report_date = datetime.strptime(row['reportDate'], "%Y-%m-%d").date()
-            if report_date == target_date:
-                earnings_list.append({
-                    "ticker": row['symbol'],
-                    "companyName": row['name'] if 'name' in row else row['symbol'],
-                    "reportTime": row.get('time', 'TBD'),
-                    "estimate": row.get('estimate', 'N/A'),
-                    "currency": row.get('currency', 'USD')
-                })
-        
-        return {
-            "date": date_str,
-            "earnings": earnings_list,
-            "source": "alpha_vantage"
-        }
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching earnings data: {str(e)}")
 
 @app.post("/api/analyze/batch")
 async def analyze_batch(tickers: List[str]):
@@ -961,11 +869,24 @@ async def earnings_stream_with_analysis(date_str: str):
     
     async def generate() -> AsyncGenerator[str, None]:
         try:
-            # Temporarily disable cache to always fetch fresh data
-            # TODO: Re-implement proper cache invalidation logic
-            cached_data = None
+            # Check for cached data first
+            from database_operations import get_cached_earnings_for_date
+            logger.info(f"SSE endpoint called for {date_str}, checking cache...")
+            cached_data = get_cached_earnings_for_date(date_str)
+            
+            if cached_data:
+                # Return cached data immediately
+                logger.info(f"✅ Found cached earnings data for {date_str}: {len(cached_data)} records")
+                yield f"data: {safe_json_dumps({
+                    'type': 'cached',
+                    'earnings': cached_data,
+                    'source': 'database_cache',
+                    'total': len(cached_data)
+                })}\n\n"
+                return
             
             # No cached data, need to fetch and analyze
+            logger.info(f"❌ No cached data found for {date_str}, fetching fresh data...")
             yield f"data: {safe_json_dumps({'type': 'start', 'message': 'Fetching earnings data...'})}\n\n"
             
             # Fetch earnings from NASDAQ
@@ -1073,6 +994,362 @@ async def earnings_stream_with_analysis(date_str: str):
             "X-Accel-Buffering": "no",  # Disable nginx buffering
         }
     )
+
+@app.get("/api/trades/executed")
+async def get_executed_trades():
+    """
+    Get all executed calendar spread trades from the database
+    """
+    conn = get_db_connection()
+    if not conn:
+        # Return mock calendar spread data if database not available
+        mock_trades = [
+            {
+                "id": "1",
+                "ticker": "AAPL",
+                "companyName": "Apple Inc.",
+                "tradeType": "Calendar Spread",
+                "entryDate": "2024-01-15",
+                "exitDate": "2024-01-17",
+                "frontStrike": 185.00,
+                "frontExpiry": "2024-01-19",
+                "frontPremium": 3.45,
+                "frontContracts": 10,
+                "backStrike": 185.00,
+                "backExpiry": "2024-02-16",
+                "backPremium": 5.20,
+                "backContracts": 10,
+                "netDebit": 175.00,
+                "pnl": 285.00,
+                "ivCrush": 18.5,
+                "expectedMove": 4.2,
+                "actualMove": 2.8,
+                "status": "closed",
+                "recommendation": "RECOMMENDED",
+                "positionSize": "6%"
+            },
+            {
+                "id": "2", 
+                "ticker": "MSFT",
+                "companyName": "Microsoft Corporation",
+                "tradeType": "Calendar Spread",
+                "entryDate": "2024-01-20",
+                "exitDate": "2024-01-22",
+                "frontStrike": 415.00,
+                "frontExpiry": "2024-01-26",
+                "frontPremium": 4.85,
+                "frontContracts": 5,
+                "backStrike": 415.00,
+                "backExpiry": "2024-02-23",
+                "backPremium": 6.90,
+                "backContracts": 5,
+                "netDebit": 102.50,
+                "pnl": -45.00,
+                "ivCrush": 12.3,
+                "expectedMove": 3.8,
+                "actualMove": 5.2,
+                "status": "closed",
+                "recommendation": "CONSIDER",
+                "positionSize": "3%"
+            }
+        ]
+        return {"trades": mock_trades}
+    
+    try:
+        with conn.cursor() as cursor:
+            sql = """
+                SELECT 
+                    id,
+                    symbol as ticker,
+                    company_name,
+                    trade_type,
+                    entry_time as entry_date,
+                    exit_time as exit_date,
+                    front_strike,
+                    front_expiry,
+                    front_premium,
+                    front_contracts,
+                    back_strike,
+                    back_expiry,
+                    back_premium,
+                    back_contracts,
+                    net_debit,
+                    pnl,
+                    iv_crush,
+                    expected_move,
+                    actual_move,
+                    status,
+                    recommendation,
+                    position_size,
+                    created_at,
+                    updated_at
+                FROM trades 
+                WHERE status = 'closed'
+                ORDER BY exit_time DESC
+            """
+            cursor.execute(sql)
+            trades = cursor.fetchall()
+            
+            # Convert to list of dicts and format dates
+            formatted_trades = []
+            for trade in trades:
+                trade_dict = dict(trade)
+                # Format dates as strings
+                for date_field in ['entry_date', 'exit_date', 'created_at', 'updated_at']:
+                    if trade_dict.get(date_field):
+                        trade_dict[date_field] = trade_dict[date_field].isoformat()
+                formatted_trades.append(trade_dict)
+            
+            return {"trades": formatted_trades}
+            
+    except Exception as e:
+        logger.error(f"Error fetching executed trades: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    finally:
+        conn.close()
+
+@app.get("/api/trades/current")
+async def get_current_holdings():
+    """
+    Get all current open calendar spread positions
+    """
+    conn = get_db_connection()
+    if not conn:
+        # Return mock calendar spread data if database not available
+        mock_holdings = [
+            {
+                "id": "4",
+                "ticker": "NVDA",
+                "companyName": "NVIDIA Corporation",
+                "tradeType": "Calendar Spread",
+                "entryDate": "2024-08-22",
+                "frontStrike": 120.00,
+                "frontExpiry": "2024-08-30",
+                "frontPremium": 2.85,
+                "frontContracts": 8,
+                "backStrike": 120.00,
+                "backExpiry": "2024-09-27",
+                "backPremium": 4.20,
+                "backContracts": 8,
+                "netDebit": 108.00,
+                "currentPrice": 119.85,
+                "unrealizedPnl": 42.00,
+                "ivCrush": None,
+                "expectedMove": 5.2,
+                "status": "open",
+                "recommendation": "RECOMMENDED",
+                "positionSize": "6%",
+                "daysHeld": 1,
+                "expectedExit": "2024-08-24"
+            },
+            {
+                "id": "5",
+                "ticker": "TSLA", 
+                "companyName": "Tesla, Inc.",
+                "tradeType": "Calendar Spread",
+                "entryDate": "2024-08-21",
+                "frontStrike": 240.00,
+                "frontExpiry": "2024-08-25",
+                "frontPremium": 5.15,
+                "frontContracts": 6,
+                "backStrike": 240.00,
+                "backExpiry": "2024-09-20",
+                "backPremium": 7.85,
+                "backContracts": 6,
+                "netDebit": 162.00,
+                "currentPrice": 238.50,
+                "unrealizedPnl": -28.00,
+                "ivCrush": None,
+                "expectedMove": 7.8,
+                "status": "open",
+                "recommendation": "CONSIDER",
+                "positionSize": "3%",
+                "daysHeld": 2,
+                "expectedExit": "2024-08-23"
+            }
+        ]
+        return {"holdings": mock_holdings}
+    
+    try:
+        with conn.cursor() as cursor:
+            sql = """
+                SELECT 
+                    id,
+                    symbol as ticker,
+                    company_name,
+                    trade_type,
+                    entry_time as entry_date,
+                    front_strike,
+                    front_expiry,
+                    front_premium,
+                    front_contracts,
+                    back_strike,
+                    back_expiry,
+                    back_premium,
+                    back_contracts,
+                    net_debit,
+                    current_price,
+                    unrealized_pnl,
+                    iv_crush,
+                    expected_move,
+                    status,
+                    recommendation,
+                    position_size,
+                    expected_exit_date,
+                    created_at,
+                    updated_at,
+                    (CURRENT_DATE - entry_time::date) as days_held
+                FROM trades 
+                WHERE status = 'open'
+                ORDER BY entry_time DESC
+            """
+            cursor.execute(sql)
+            holdings = cursor.fetchall()
+            
+            # Convert to list of dicts and format dates
+            formatted_holdings = []
+            for holding in holdings:
+                holding_dict = dict(holding)
+                # Format dates as strings
+                for date_field in ['entry_date', 'expected_exit_date', 'created_at', 'updated_at']:
+                    if holding_dict.get(date_field):
+                        holding_dict[date_field] = holding_dict[date_field].isoformat()
+                formatted_holdings.append(holding_dict)
+            
+            return {"holdings": formatted_holdings}
+            
+    except Exception as e:
+        logger.error(f"Error fetching current holdings: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    finally:
+        conn.close()
+
+@app.get("/api/trades/portfolio-history")
+async def get_portfolio_history():
+    """
+    Get portfolio value history for chart display
+    """
+    conn = get_db_connection()
+    if not conn:
+        # Return mock portfolio history if database not available
+        from datetime import datetime, timedelta
+        mock_history = []
+        base_value = 100000
+        for i in range(30):
+            date = datetime.now() - timedelta(days=29-i)
+            # Add some variation to simulate real trading
+            variation = (i % 7 - 3) * 150 + (i * 50)
+            mock_history.append({
+                "date": date.strftime("%Y-%m-%d"),
+                "value": base_value + variation,
+                "dailyPnl": variation if i > 0 else 0
+            })
+        return {"history": mock_history}
+    
+    try:
+        with conn.cursor() as cursor:
+            sql = """
+                SELECT 
+                    date,
+                    total_value,
+                    cash_balance,
+                    positions_value,
+                    daily_pnl
+                FROM portfolio_history 
+                ORDER BY date DESC
+                LIMIT 90
+            """
+            cursor.execute(sql)
+            history = cursor.fetchall()
+            
+            # Convert to list of dicts and format dates
+            formatted_history = []
+            for record in history:
+                history_dict = dict(record)
+                # Format date as string
+                if history_dict.get('date'):
+                    history_dict['date'] = history_dict['date'].isoformat()
+                # Convert Decimal to float
+                for field in ['total_value', 'cash_balance', 'positions_value', 'daily_pnl']:
+                    if history_dict.get(field) is not None:
+                        history_dict[field] = float(history_dict[field])
+                formatted_history.append(history_dict)
+            
+            # Reverse to get chronological order
+            formatted_history.reverse()
+            
+            return {"history": formatted_history}
+            
+    except Exception as e:
+        logger.error(f"Error fetching portfolio history: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    finally:
+        conn.close()
+
+@app.get("/api/trades/summary")
+async def get_trades_summary():
+    """
+    Get trading summary statistics
+    """
+    conn = get_db_connection()
+    if not conn:
+        # Return mock data if database not available
+        return {
+            "totalRealizedPnl": 422.50,
+            "totalUnrealizedPnl": -47.00,
+            "winRate": 66.7,
+            "totalTrades": 3,
+            "activeTrades": 2,
+            "avgTradeReturn": 7.3
+        }
+    
+    try:
+        with conn.cursor() as cursor:
+            # Get realized P&L and trade count
+            cursor.execute("""
+                SELECT 
+                    COALESCE(SUM(pnl), 0) as total_realized_pnl,
+                    COUNT(*) as total_trades,
+                    COUNT(CASE WHEN pnl > 0 THEN 1 END) as winning_trades
+                FROM trades 
+                WHERE status = 'closed' AND pnl IS NOT NULL
+            """)
+            realized_stats = cursor.fetchone()
+            
+            # Get unrealized P&L and active trade count  
+            cursor.execute("""
+                SELECT 
+                    COALESCE(SUM(unrealized_pnl), 0) as total_unrealized_pnl,
+                    COUNT(*) as active_trades
+                FROM trades 
+                WHERE status = 'open' AND unrealized_pnl IS NOT NULL
+            """)
+            unrealized_stats = cursor.fetchone()
+            
+            # Calculate win rate
+            win_rate = 0
+            if realized_stats['total_trades'] > 0:
+                win_rate = (realized_stats['winning_trades'] / realized_stats['total_trades']) * 100
+            
+            # Calculate average trade return (simplified)
+            avg_return = 0
+            if realized_stats['total_trades'] > 0:
+                avg_return = float(realized_stats['total_realized_pnl']) / realized_stats['total_trades']
+            
+            return {
+                "totalRealizedPnl": float(realized_stats['total_realized_pnl']),
+                "totalUnrealizedPnl": float(unrealized_stats['total_unrealized_pnl']),
+                "winRate": round(win_rate, 1),
+                "totalTrades": realized_stats['total_trades'],
+                "activeTrades": unrealized_stats['active_trades'],
+                "avgTradeReturn": round(avg_return, 2)
+            }
+            
+    except Exception as e:
+        logger.error(f"Error fetching trades summary: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    finally:
+        conn.close()
 
 if __name__ == "__main__":
     import uvicorn

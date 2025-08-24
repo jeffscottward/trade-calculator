@@ -53,12 +53,12 @@ export function StockNewsFeed() {
             return data.items.slice(0, 5).map((item: any, index: number) => ({
               id: `${source.name}-${index}-${item.guid || item.link || item.title?.substring(0, 20)}`,
               title: item.title,
-              description: item.description?.replace(/<[^>]*>?/gm, '').substring(0, 150) + '...',
+              description: item.description ? item.description.replace(/<[^>]*>?/gm, '').substring(0, 150).trim() : '',
               url: item.link,
               source: source.name,
               publishedAt: item.pubDate,
               category: item.categories?.[0] || 'Markets',
-              sentiment: analyzeSentiment(item.title + ' ' + item.description)
+              sentiment: analyzeSentiment(item.title + ' ' + (item.description || ''))
             }))
           } catch (err) {
             console.log(`🚀 ~ file: stock-news-feed.tsx:58 → fetchNews → Error fetching ${source.name}:`, err)
@@ -139,30 +139,32 @@ export function StockNewsFeed() {
             <p className="text-muted-foreground">No news available</p>
           </div>
         ) : (
-          <div style={{ height: '370px' }} className="overflow-y-auto space-y-4 pr-2">
-            {news.map((item) => (
+          <div style={{ height: '370px' }} className="overflow-y-auto pr-2">
+            {news.map((item, index) => (
               <article
                 key={item.id}
-                className="border-b pb-3 last:border-0 hover:bg-muted/50 transition-colors rounded-lg p-2 -m-2"
+                className="border-b last:border-0"
               >
                 <a
                   href={item.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block space-y-1"
+                  className="block py-3 px-1 hover:bg-muted/30 transition-colors rounded-md"
                 >
-                  <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-start justify-between gap-2 mb-1">
                     <h3 className="font-medium text-sm line-clamp-2 flex-1">
                       {item.title}
                     </h3>
                     <ExternalLink className="h-3 w-3 mt-1 flex-shrink-0 text-muted-foreground" />
                   </div>
                   
-                  <p className="text-xs text-muted-foreground line-clamp-2">
-                    {item.description}
-                  </p>
+                  {item.description && (
+                    <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+                      {item.description}
+                    </p>
+                  )}
                   
-                  <div className="flex items-center gap-2 mt-2">
+                  <div className="flex items-center gap-2">
                     <Badge variant="outline" className="text-xs">
                       {item.source}
                     </Badge>
