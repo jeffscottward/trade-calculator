@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import { ArrowLeft, TrendingUp, DollarSign } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -43,7 +43,6 @@ interface TradeAnalysis {
 
 export default function StockDetailPage() {
   const params = useParams()
-  const router = useRouter()
   const ticker = params.ticker as string
   
   const [stockDetails, setStockDetails] = useState<StockDetails | null>(null)
@@ -135,9 +134,8 @@ export default function StockDetailPage() {
         <Button
           variant="outline"
           onClick={() => {
-            // Simply go back to the earnings page without any date
-            // The earnings page will use URL param or default to current date
-            router.push('/earnings')
+            // Use browser's native back functionality to preserve URL parameters
+            window.history.back()
           }}
           size="sm"
         >
@@ -453,9 +451,8 @@ export default function StockDetailPage() {
         <Button
           variant="outline"
           onClick={() => {
-            // Simply go back to the earnings page without any date
-            // The earnings page will use URL param or default to current date
-            router.push('/earnings')
+            // Use browser's native back functionality to preserve URL parameters
+            window.history.back()
           }}
           size="lg"
         >
