@@ -53,13 +53,18 @@ class DatabaseManager:
     
     def insert_earnings_event(self, symbol: str, earnings_date: datetime,
                              term_structure_slope: float, avg_volume_30d: int,
-                             iv_rv_ratio: float, recommendation: str) -> int:
-        """Insert a new earnings event and return its ID."""
+                             iv_rv_ratio: float, recommendation: str,
+                             priority_score: float = 0, iv_rv_score: float = 0,
+                             term_slope_score: float = 0, liquidity_score: float = 0,
+                             market_cap_score: float = 0, market_cap_numeric: int = 0) -> int:
+        """Insert a new earnings event with priority scoring and return its ID."""
         query = """
             INSERT INTO earnings_events 
             (symbol, earnings_date, scan_date, term_structure_slope, 
-             avg_volume_30d, iv_rv_ratio, recommendation)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+             avg_volume_30d, iv_rv_ratio, recommendation,
+             priority_score, iv_rv_score, term_slope_score,
+             liquidity_score, market_cap_score, market_cap_numeric)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id
         """
         
@@ -68,7 +73,9 @@ class DatabaseManager:
                 cursor.execute(query, (
                     symbol, earnings_date, datetime.now(),
                     term_structure_slope, avg_volume_30d,
-                    iv_rv_ratio, recommendation
+                    iv_rv_ratio, recommendation,
+                    priority_score, iv_rv_score, term_slope_score,
+                    liquidity_score, market_cap_score, market_cap_numeric
                 ))
                 conn.commit()
                 return cursor.fetchone()[0]

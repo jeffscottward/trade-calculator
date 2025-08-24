@@ -218,12 +218,14 @@ class IBTradeExecutor(EWrapper, EClient):
             logger.error("Cannot execute trades - not connected to IB")
             return []
         
-        # Get today's recommendations
+        # Get today's recommendations ordered by priority score
         query = """
             SELECT * FROM earnings_events
             WHERE DATE(scan_date) = CURRENT_DATE
             AND recommendation = 'RECOMMENDED'
             AND id NOT IN (SELECT earnings_event_id FROM trades WHERE DATE(entry_time) = CURRENT_DATE)
+            ORDER BY priority_score DESC, iv_rv_ratio DESC
+            LIMIT 3  -- Respect max concurrent positions
         """
         recommendations = self.db.execute_query(query)
         

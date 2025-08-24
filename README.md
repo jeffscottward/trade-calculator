@@ -1,6 +1,6 @@
 # Automated Earnings Volatility Trading System
 
-An automated options trading system that sells volatility around earnings events using calendar spreads. Features a modern web-based interface for analyzing earnings opportunities and executing trades through multiple broker APIs.
+An automated options trading system that sells volatility around earnings events using calendar spreads. Features a modern web-based interface for analyzing earnings opportunities and executing trades through Interactive Brokers API.
 
 ## 📺 Video Tutorial
 
@@ -16,10 +16,10 @@ Join our Discord community for help and discussions:
 
 ### Prerequisites
 
-- Python 3.10+ (tested on 3.10.11, now compatible with 3.13+)
+- Python 3.10+ (tested with 3.10-3.13)
 - Node.js 18+ and pnpm package manager
-- pip package manager
-- PostgreSQL database (using Neon cloud DB)
+- Interactive Brokers Pro account
+- Neon PostgreSQL database (free tier available)
 
 ### Installation
 
@@ -29,7 +29,16 @@ git clone https://github.com/jeffscottward/trade-calculator.git
 cd trade-calculator
 ```
 
-2. Set up Python environment (backend):
+2. Set up environment variables:
+```bash
+cp .env.example .env
+# Edit .env with your credentials:
+# - IB account credentials
+# - Neon DB connection string
+# - API keys
+```
+
+3. Set up Python backend:
 ```bash
 cd backend
 python -m venv venv
@@ -38,11 +47,18 @@ pip install -r requirements.txt
 cd ..
 ```
 
-3. Set up frontend environment:
+4. Set up frontend:
 ```bash
-cd frontend/apps/web
+cd frontend
 pnpm install
-cd ../../..
+cd ..
+```
+
+5. Initialize database:
+```bash
+cd backend
+python automation/database/init_db.py
+cd ..
 ```
 
 ### Running the Application
@@ -56,47 +72,57 @@ cd ../../..
 
 This will start:
 - Next.js frontend on http://localhost:3001
-- FastAPI backend on http://localhost:3000  
-- IB Client Portal Gateway on https://localhost:5001
+- FastAPI backend on http://localhost:3000
+- IB Client Portal Gateway on https://localhost:5001 (requires manual login)
 
 #### Manual Start (Individual Services)
 
 ```bash
-# Navigate to frontend directory
+# Terminal 1: Start backend API
+cd backend
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+python api/main.py
+
+# Terminal 2: Start frontend
 cd frontend
-
-# Install dependencies (first time only)
-pnpm install
-
-# Start the development server
 pnpm run dev
+
+# Terminal 3: Start IB Gateway (if trading)
+cd backend/clientportal.gw/bin
+./run.sh  # On Windows: run.bat
 ```
 
-The web interface will be available at:
-- Frontend: http://localhost:3001
-- Backend API: http://localhost:3000
+### Testing Components
 
-To test Yahoo Finance connection:
 ```bash
+# Test Yahoo Finance connection
 python scripts/test_yfinance.py
+
+# Test IB connection (gateway must be running)
+cd backend
+python tests/test_ib_connection.py
+
+# Run automated tests
+python -m pytest tests/
 ```
 
 ### Running the IB Client Portal Gateway
 
 ```bash
-# Start the IB Client Portal Gateway on port 5001
-cd clientportal.gw/bin
+# Navigate to the gateway directory
+cd backend/clientportal.gw/bin
+
+# Start the gateway (runs on port 5001)
 ./run.sh  # On macOS/Linux
-# OR
 run.bat   # On Windows
 ```
 
-**Important Authentication Notes:**
-- The gateway runs on port 5001 (configured to avoid conflicts)
-- Browser login credentials are different from API credentials
-- Check `.env` file for `IB_BROWSER_USERNAME` for web login
-- After successful login, you'll see "Client login succeeds" on the page
+**Important Notes:**
+- Gateway runs on **port 5001** (configured to avoid port conflicts)
+- Access the gateway at: https://localhost:5001
+- Login with your IB credentials (check `.env` for `IB_BROWSER_USERNAME`)
 - Keep the browser tab open during your trading session
+- Gateway must be running for all trading operations
 
 ## 📚 Documentation
 
@@ -119,93 +145,215 @@ This system implements a systematic approach to selling earnings volatility thro
 - **Risk Management**: 6% position sizing (10% Kelly criterion)
 - **Trade Structure**: Long calendar spreads (sell front month, buy back month)
 
+### Trade Ranking System
+
+Not all earnings trades are equal. The system uses a sophisticated **Priority Score (0-100)** to rank opportunities:
+
+#### How Priority Scores Work
+
+Each trade is scored based on four key factors:
+
+1. **IV/RV Ratio (40% weight)**: How overpriced is the implied volatility?
+   - Compares implied volatility to realized volatility
+   - Higher ratios mean options are more expensive relative to actual stock movement
+   - Example: IV/RV of 2.0 means options price in 2x the actual volatility
+
+2. **Term Structure Slope (30% weight)**: How steep is the volatility curve?
+   - Measures difference between near-term and longer-term implied volatility
+   - Negative slopes (backwardation) indicate better opportunities
+   - Example: -0.4 slope means front month IV is 40% higher than back month
+
+3. **Liquidity Score (20% weight)**: How easy is it to trade?
+   - Based on 30-day average trading volume
+   - Higher volume means tighter spreads and easier execution
+   - Ensures we can enter and exit positions efficiently
+
+4. **Market Cap (10% weight)**: Company size for stability
+   - Larger companies tend to have more liquid options
+   - Provides a stability factor but doesn't dominate the ranking
+
+#### Why This Matters
+
+With limited capital (max 20% portfolio exposure, 3 concurrent positions), the system must choose the best opportunities. Instead of trading alphabetically or by company size, it prioritizes trades with:
+- The most overpriced volatility
+- The steepest term structure advantage
+- Sufficient liquidity for clean execution
+
+This ensures maximum expected return within risk limits.
+
 ## 🛠️ Features
 
-### Web Interface (New)
-- **Interactive Earnings Calendar**: Visual calendar with earnings highlights
-- **Daily Earnings Table**: View all stocks reporting on any selected date
-- **Fuzzy Search**: Quickly find specific stocks across all earnings dates
-- **One-Click Analysis**: Analyze any stock with a single click
-- **Report Time Display**: See whether earnings are BMO (Before Market Open) or AMC (After Market Close)
-- **Modern Tech Stack**: Built with Next.js, React, TypeScript, and Tailwind CSS
+### Web Interface
+- **Earnings Calendar**: Interactive calendar showing upcoming earnings events
+- **Stock Analysis**: One-click analysis with IV/RV ratios and term structure
+- **Trade Dashboard**: Real-time position monitoring and P&L tracking
+- **Risk Overview**: Portfolio exposure and drawdown metrics
+- **Search**: Find stocks by ticker or company name
+- **Tech Stack**: Next.js 14, React 18, TypeScript, Tailwind CSS, shadcn/ui
 
-### Current Features
-- **Black-Scholes Options Pricing**: Accurate theoretical options pricing
-- **Yang-Zhang Volatility**: Advanced volatility calculation for better accuracy
-- **Real-time Data**: Live market data from Yahoo Finance
-- **Trade Qualification**: Analyzes term structure, volume, and IV/RV ratios
+### Trading Features
+- **Options Pricing**: Black-Scholes model with Greeks calculation
+- **Volatility Analysis**: Yang-Zhang volatility with historical comparison
+- **Real-time Data**: Live options chains from Yahoo Finance and IB
+- **Trade Qualification**: Automated screening based on term structure and IV/RV
+- **Position Management**: Automated entry/exit with risk controls
 
-### Automation Features
-- **Automated Scanning**: Daily earnings event detection via NASDAQ API (free, no key required)
-- **Interactive Brokers Integration**: Automated order execution via TWS/Gateway API
-- **IB Client Portal API**: REST API for account data and trading (port 5001)
-- **Position Management**: Automatic entry 15 min before close, exit 15 min after open
-- **Risk Controls**: Portfolio limits, drawdown monitoring, emergency stops
-- **Performance Tracking**: Real-time P&L, win rate, and Sharpe ratio monitoring
+### Automation Capabilities
+- **Earnings Detection**: Daily scan via NASDAQ API at 3 PM ET
+- **Order Execution**: Fully automated via IB Client Portal API
+- **Trade Timing**: Entry at 3:45 PM (before earnings), exit at 9:45 AM (after)
+- **Risk Management**: 
+  - Position sizing: 6% per trade (Kelly criterion)
+  - Max concurrent: 3 positions
+  - Portfolio limit: 20% total exposure
+  - Stop-loss: 50% of premium received
+- **Performance Analytics**: Win rate, Sharpe ratio, maximum drawdown tracking
 
-## 📋 Disclaimer
+## ⚠️ Disclaimer
 
-This software is provided solely for educational and research purposes. It is not intended to provide investment advice, and no investment recommendations are made herein. The developers are not financial advisors and accept no responsibility for any financial decisions or losses resulting from the use of this software. Always consult a professional financial advisor before making any investment decisions.
+**IMPORTANT**: This software is for educational and research purposes only. 
 
-## 🏦 Broker Integration
+- Not investment advice - no recommendations are made
+- Use at your own risk - real money trading can result in losses
+- The developers assume no liability for financial decisions
+- Past performance does not guarantee future results
+- Always consult a licensed financial advisor before trading
 
-### Why Interactive Brokers?
+**Risk Warning**: Options trading involves substantial risk and is not suitable for all investors. You can lose more than your initial investment.
 
-After researching multiple broker APIs, we've selected **Interactive Brokers** for the following reasons:
+## 🏦 Interactive Brokers Integration
 
-1. **Best API Support**: Native Python API with excellent documentation and stability
-2. **Competitive Pricing**: $0.15-$0.65 per options contract for active traders
-3. **Professional Features**: Advanced order types, portfolio margin, international markets
-4. **Proven Track Record**: Used in the original research and backtesting
-5. **No Token Expiration**: Unlike Schwab's 7-day tokens, IB maintains persistent connections
+### System Requirements
+
+- **Interactive Brokers Pro Account** (not Lite) for unrestricted API access
+- **IB Client Portal Gateway** for REST API access (runs on port 5001)
+- **Python API Support** via ib_insync library for automated trading
+
+### Key Features
+
+1. **Automated Order Execution**: Full support for complex options orders
+2. **Real-time Market Data**: Live feed for options chains and market depth
+3. **Portfolio Management**: Automatic position monitoring and P&L tracking
+4. **Risk Controls**: Built-in portfolio limits and emergency stops
 
 ### Data Sources
 
-- **Earnings Calendar**: NASDAQ (free, no API key required)
-- **Market Data**: Yahoo Finance via yfinance library
-- **Backup Data**: Interactive Brokers real-time feed
-- **IB Client Portal API**: REST API documentation at [IB Campus](https://www.interactivebrokers.com/campus/ibkr-api-page/cpapi-v1/#introduction)
+- **Earnings Calendar**: NASDAQ API (free, no key required)
+- **Options Data**: Yahoo Finance (primary), Interactive Brokers (backup)
+- **Market Data**: Real-time feed from IB when gateway is connected
+- **Historical Data**: Stored in Neon PostgreSQL for backtesting
+
+### API Documentation
+
+- **IB Client Portal**: [Official Documentation](https://www.interactivebrokers.com/campus/ibkr-api-page/cpapi-v1/)
+- **FastAPI Backend**: Auto-generated docs at http://localhost:3000/docs when running
 
 ## 🔄 Automated Trading Workflow
 
-1. **Daily Scan (3:00 PM ET)**: Identify tomorrow's earnings events
-2. **Qualification**: Check term structure, volume, and IV/RV ratios
-3. **Position Sizing**: Calculate 6% portfolio allocation per trade
-4. **Order Entry**: Place calendar spread 15 minutes before close
-5. **Exit**: Close position 15 minutes after market open next day
-6. **Logging**: Track all trades and performance metrics
+### Daily Operations
 
-See [System Design Document](docs/SYSTEM_DESIGN.md) for detailed architecture.
+1. **3:00 PM ET - Earnings Scan**
+   - Scans NASDAQ API for tomorrow's earnings
+   - Filters by volume (>1M daily average)
+   - Checks IV/RV ratio (>1.2 required)
+
+2. **3:45 PM ET - Trade Qualification**
+   - Analyzes term structure slope
+   - Verifies options liquidity
+   - Calculates position sizes (6% per trade)
+
+3. **3:45 PM ET - Order Entry**
+   - Places calendar spread orders via IB API
+   - Sells front month, buys back month
+   - Sets stop-loss at 50% of premium received
+
+4. **9:45 AM ET Next Day - Position Exit**
+   - Closes all earnings positions
+   - Records P&L in database
+   - Updates performance metrics
+
+### Manual Controls
+
+```bash
+# Run earnings scanner manually
+cd backend
+python automation/earnings_scanner.py
+
+# Execute trades manually
+python automation/trade_executor.py
+
+# Monitor positions
+python automation/position_manager.py
+
+# Test priority scoring
+python ../scripts/test_priority_scoring.py
+```
 
 ## 🐛 Troubleshooting
 
-If you encounter Yahoo Finance rate limiting (429 errors):
-1. Wait 1-2 minutes and try again
-2. Run `python scripts/test_yfinance.py` to test the connection
-3. Check the Discord community for support
+### Common Issues
+
+**Yahoo Finance Rate Limiting (429 errors)**
+- Wait 1-2 minutes between requests
+- Use `python scripts/test_yfinance.py` to verify connection
+- Consider using IB market data as backup
+
+**IB Gateway Connection Issues**
+- Ensure gateway is running on port 5001
+- Check firewall settings for port access
+- Verify credentials in `.env` file
+- Try restarting the gateway
+
+**Database Connection Errors**
+- Verify Neon DB connection string in `.env`
+- Check network connectivity
+- Run `python automation/database/init_db.py` to reset schema
+
+**Frontend Build Errors**
+- Clear Next.js cache: `rm -rf frontend/apps/web/.next`
+- Reinstall dependencies: `cd frontend && pnpm install`
+- Check Node.js version (requires 18+)
 
 ## 📁 Project Structure
 
 ```
 trade-calculator/
-├── requirements.txt           # Python dependencies
-├── docs/                      # Documentation and resources
-│   ├── SYSTEM_DESIGN.md      # Automated trading system architecture
-│   ├── Earnings Research.pdf # Original strategy research
-│   ├── Earnings Tracker.xlsx # Trade tracking spreadsheet
-│   └── yt-transcript.txt     # Full strategy explanation
+├── backend/                   # Python backend services
+│   ├── api/                   # FastAPI server
+│   │   ├── endpoints/         # API route handlers
+│   │   └── main.py           # Server entry point
+│   ├── automation/            # Automated trading modules
+│   │   ├── database/          # Neon DB integration
+│   │   ├── utils/             # Helper utilities
+│   │   ├── config.py         # Central configuration
+│   │   ├── earnings_scanner.py   # Daily earnings scanner
+│   │   ├── trade_executor.py     # IB order execution
+│   │   ├── position_manager.py   # Entry/exit automation
+│   │   ├── risk_monitor.py       # Risk management
+│   │   └── ib_api_client.py     # IB API wrapper
+│   ├── clientportal.gw/       # IB Client Portal Gateway
+│   │   ├── bin/               # Executable scripts
+│   │   └── root/              # Configuration files
+│   ├── tests/                 # Unit and integration tests
+│   └── requirements.txt       # Python dependencies
+├── frontend/                  # Next.js web application
+│   ├── apps/
+│   │   └── web/              # Main web app
+│   │       ├── src/
+│   │       │   ├── app/      # App router pages
+│   │       │   ├── components/   # React components
+│   │       │   ├── lib/      # Utilities and helpers
+│   │       │   └── styles/   # CSS and styling
+│   │       └── package.json  # Frontend dependencies
+│   └── pnpm-workspace.yaml   # pnpm workspace config
+├── docs/                      # Documentation
+│   ├── SYSTEM_DESIGN.md     # Architecture overview
+│   └── Earnings Research.pdf # Strategy research
 ├── scripts/                   # Utility scripts
-│   ├── test_yfinance.py      # Yahoo Finance connection tester
-│   └── test_finance_calendars.py # Calendar data testing
-├── automation/                # Automated trading modules
-│   ├── earnings_scanner.py   # Daily earnings event scanner
-│   ├── trade_executor.py     # IB order execution
-│   ├── position_manager.py   # Entry/exit automation
-│   └── risk_monitor.py       # Risk management system
-├── clientportal.gw/           # IB Client Portal Gateway (port 5001)
-│   ├── bin/                   # Executable scripts
-│   │   ├── run.sh            # macOS/Linux startup script
-│   │   └── run.bat           # Windows startup script
-│   └── root/                  # Configuration files
-└── logs/                      # Debug logs (gitignored)
+│   ├── start-dev.sh          # Start all services
+│   ├── test_yfinance.py     # Test Yahoo Finance
+│   └── test_finance_calendars.py
+├── .taskmaster/              # Task Master AI integration
+├── CLAUDE.md                 # Claude Code instructions
+└── README.md                 # This file
 ```

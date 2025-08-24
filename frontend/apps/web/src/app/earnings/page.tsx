@@ -206,15 +206,18 @@ function EarningsPageContent() {
                     const recommendedTrades = earningsData
                       .filter(stock => stock.recommendation === 'RECOMMENDED')
                       .sort((a, b) => {
-                        // Sort by market cap (larger = better for options liquidity)
-                        const getMarketCapValue = (cap: string) => {
-                          if (!cap) return 0
-                          const num = parseFloat(cap.replace(/[$,BM]/g, ''))
-                          if (cap.includes('B')) return num * 1000000000
-                          if (cap.includes('M')) return num * 1000000
-                          return num
+                        // Sort by priority score (higher = better opportunity)
+                        const scoreA = a.priority_score || a.priorityScore || 0
+                        const scoreB = b.priority_score || b.priorityScore || 0
+                        
+                        // If scores are equal, fall back to IV/RV ratio
+                        if (scoreA === scoreB) {
+                          const ivrvA = a.iv_rv_ratio || a.ivRvRatio || 1
+                          const ivrvB = b.iv_rv_ratio || b.ivRvRatio || 1
+                          return ivrvB - ivrvA
                         }
-                        return getMarketCapValue(b.marketCap || '') - getMarketCapValue(a.marketCap || '')
+                        
+                        return scoreB - scoreA
                       })
                     
                     if (recommendedTrades.length === 0) {
@@ -243,10 +246,11 @@ function EarningsPageContent() {
                                 </p>
                               </div>
                               <div className="text-right">
-                                <p className="text-sm font-medium">Position Size</p>
+                                <p className="text-sm font-medium">Priority Score</p>
                                 <p className="text-lg font-bold text-green-600">
-                                  {stock.position_size || '6%'}
+                                  {(stock.priority_score || stock.priorityScore || 0).toFixed(1)}
                                 </p>
+                                <p className="text-xs text-muted-foreground mt-1">Position: 6%</p>
                               </div>
                             </div>
                           </div>

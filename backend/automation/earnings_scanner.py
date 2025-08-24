@@ -16,6 +16,7 @@ from .config import STRATEGY_CONFIG
 from .database.db_manager import DatabaseManager
 from .utils.volatility import calculate_yang_zhang, calculate_iv_rv_ratio
 from .utils.options_analysis import analyze_term_structure
+from .utils.priority_scorer import PriorityScorer
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -197,6 +198,20 @@ class EarningsScanner:
             qualification = self.qualify_trade(symbol, earnings_date)
             
             if qualification['qualified']:
+                # Calculate priority scores
+                market_cap_str = event.get('marketCap', '0')
+                market_cap_numeric = PriorityScorer.parse_market_cap_string(market_cap_str)
+                
+                scores = PriorityScorer.calculate_priority_score(
+                    iv_rv_ratio=qualification.get('iv_rv_ratio', 1.0),
+                    term_slope=qualification.get('term_structure_slope', 0),
+                    avg_volume_30d=qualification.get('avg_volume_30d', 0),
+                    market_cap=market_cap_numeric
+                )
+                
+                # Add scores to qualification
+                qualification.update(scores)
+                qualification['market_cap_numeric'] = market_cap_numeric
                 # Store in database
                 try:
                     event_id = self.db.insert_earnings_event(
@@ -205,7 +220,13 @@ class EarningsScanner:
                         term_structure_slope=qualification['term_structure_slope'],
                         avg_volume_30d=qualification['avg_volume_30d'],
                         iv_rv_ratio=qualification['iv_rv_ratio'],
-                        recommendation=qualification['recommendation']
+                        recommendation=qualification['recommendation'],
+                        priority_score=qualification['priority_score'],
+                        iv_rv_score=qualification['iv_rv_score'],
+                        term_slope_score=qualification['term_slope_score'],
+                        liquidity_score=qualification['liquidity_score'],
+                        market_cap_score=qualification['market_cap_score'],
+                        market_cap_numeric=qualification['market_cap_numeric']
                     )
                     
                     qualified_trades.append({
@@ -226,12 +247,12 @@ class EarningsScanner:
         return qualified_trades
     
     def get_todays_recommendations(self) -> List[Dict]:
-        """Get all recommended trades from today's scan."""
+        """Get all recommended trades from today's scan, ordered by priority."""
         query = """
             SELECT * FROM earnings_events
             WHERE DATE(scan_date) = CURRENT_DATE
             AND recommendation IN ('RECOMMENDED', 'CONSIDER')
-            ORDER BY recommendation, symbol
+            ORDER BY priority_score DESC, iv_rv_ratio DESC
         """
         return self.db.execute_query(query)
 
