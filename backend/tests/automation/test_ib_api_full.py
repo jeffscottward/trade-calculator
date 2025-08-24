@@ -10,8 +10,9 @@ import logging
 import json
 from datetime import datetime, timedelta
 
-# Add current directory to path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Add backend directory to path for imports
+backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, backend_dir)
 
 # Setup logging
 logging.basicConfig(
@@ -23,7 +24,7 @@ logger = logging.getLogger(__name__)
 def test_account_info():
     """Test retrieving account information"""
     try:
-        from ib_api_client import IBAPIClient
+        from automation.ib_api_client import IBAPIClient
         
         logger.info("=" * 60)
         logger.info("Testing Account Information Retrieval")
@@ -58,7 +59,7 @@ def test_account_info():
 def test_contract_search():
     """Test searching for contracts"""
     try:
-        from ib_api_client import IBAPIClient
+        from automation.ib_api_client import IBAPIClient
         
         logger.info("=" * 60)
         logger.info("Testing Contract Search")
@@ -91,7 +92,7 @@ def test_contract_search():
 def test_option_chain():
     """Test retrieving option chains"""
     try:
-        from ib_api_client import IBAPIClient
+        from automation.ib_api_client import IBAPIClient
         
         logger.info("=" * 60)
         logger.info("Testing Option Chain Retrieval")
@@ -129,7 +130,7 @@ def test_option_chain():
 def test_calendar_spread_order():
     """Test creating (but not placing) a calendar spread order"""
     try:
-        from ib_api_client import IBAPIClient, CalendarSpreadOrder
+        from automation.ib_api_client import IBAPIClient, CalendarSpreadOrder
         
         logger.info("=" * 60)
         logger.info("Testing Calendar Spread Order Creation")

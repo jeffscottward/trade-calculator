@@ -9,8 +9,9 @@ import logging
 from datetime import datetime, timedelta
 import json
 
-# Add current directory to path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Add backend directory to path for imports
+backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, backend_dir)
 
 # Setup logging
 logging.basicConfig(
@@ -23,8 +24,8 @@ def test_earnings_scan():
     """Test scanning for upcoming earnings"""
     try:
         # Import after path is set
-        from earnings_scanner import EarningsScanner
-        from database.db_manager import DatabaseManager
+        from automation.earnings_scanner import EarningsScanner
+        from automation.database.db_manager import DatabaseManager
         
         logger.info("=" * 60)
         logger.info("Testing Earnings Scanner")
@@ -62,7 +63,7 @@ def test_option_analysis(symbol):
     """Test option chain analysis for a symbol"""
     try:
         import yfinance as yf
-        from utils.options_analysis import find_optimal_calendar_strikes
+        from automation.utils.options_analysis import find_optimal_calendar_strikes
         
         logger.info(f"\n" + "=" * 60)
         logger.info(f"Testing Option Analysis for {symbol}")
@@ -181,7 +182,7 @@ def test_trade_qualification(symbol):
 def test_paper_trade_placement():
     """Test placing a paper trade (simulation only)"""
     try:
-        from ib_api_client import IBAPIClient, CalendarSpreadOrder
+        from automation.ib_api_client import IBAPIClient, CalendarSpreadOrder
         
         logger.info("\n" + "=" * 60)
         logger.info("Testing Paper Trade Placement (Simulation)")

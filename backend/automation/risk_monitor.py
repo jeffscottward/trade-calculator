@@ -7,9 +7,9 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 import numpy as np
 
-from database.db_manager import DatabaseManager
-from config import RISK_CONFIG, STRATEGY_CONFIG
-from utils.notifications import send_alert
+from .database.db_manager import DatabaseManager
+from .config import RISK_CONFIG, STRATEGY_CONFIG
+from .utils.notifications import send_alert
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

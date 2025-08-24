@@ -8,9 +8,9 @@ from datetime import datetime, time, timedelta
 import pytz
 from typing import List, Dict, Optional
 
-from database.db_manager import DatabaseManager
-from trade_executor import IBTradeExecutor
-from config import TRADING_HOURS, STRATEGY_CONFIG
+from .database.db_manager import DatabaseManager
+from .trade_executor import IBTradeExecutor
+from .config import TRADING_HOURS, STRATEGY_CONFIG
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

@@ -10,8 +10,9 @@ import logging
 from datetime import datetime, timedelta
 import time
 
-# Add current directory to path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Add backend directory to path for imports
+backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, backend_dir)
 
 # Setup logging
 logging.basicConfig(
@@ -23,7 +24,7 @@ logger = logging.getLogger(__name__)
 def place_test_calendar_spread():
     """Place a real calendar spread in the paper account"""
     try:
-        from ib_api_client import IBAPIClient, CalendarSpreadOrder
+        from automation.ib_api_client import IBAPIClient, CalendarSpreadOrder
         
         logger.info("=" * 60)
         logger.info("REAL Paper Trade Test - Calendar Spread")

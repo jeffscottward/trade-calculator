@@ -15,9 +15,9 @@ from ibapi.contract import Contract
 from ibapi.order import Order
 from ibapi.common import BarData
 
-from config import BROKER_CONFIG, STRATEGY_CONFIG, RISK_CONFIG
-from database.db_manager import DatabaseManager
-from utils.options_analysis import find_optimal_calendar_strikes
+from .config import BROKER_CONFIG, STRATEGY_CONFIG, RISK_CONFIG
+from .database.db_manager import DatabaseManager
+from .utils.options_analysis import find_optimal_calendar_strikes
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

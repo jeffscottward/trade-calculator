@@ -8,12 +8,12 @@ import logging
 from datetime import datetime
 import argparse
 
-from earnings_scanner import EarningsScanner
-from trade_executor import IBTradeExecutor
-from position_manager import PositionManager
-from risk_monitor import RiskMonitor
-from database.db_manager import DatabaseManager
-from utils.notifications import send_notification, send_daily_report
+from .earnings_scanner import EarningsScanner
+from .trade_executor import IBTradeExecutor
+from .position_manager import PositionManager
+from .risk_monitor import RiskMonitor
+from .database.db_manager import DatabaseManager
+from .utils.notifications import send_notification, send_daily_report
 
 # Configure logging
 logging.basicConfig(
@@ -181,7 +181,7 @@ def main():
     
     # Initialize database if requested
     if args.init_db:
-        from database.init_db import init_database
+        from .database.init_db import init_database
         if init_database():
             print("Database initialized successfully")
         else:
@@ -226,5 +226,5 @@ if __name__ == "__main__":
         logger.info("System stopped by user")
     except Exception as e:
         logger.error(f"System error: {e}", exc_info=True)
-        from utils.notifications import send_error_alert
+        from .utils.notifications import send_error_alert
         send_error_alert("System Crash", str(e))
