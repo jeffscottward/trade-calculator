@@ -50,18 +50,9 @@ export default function StockDetailPage() {
   const [analysis, setAnalysis] = useState<TradeAnalysis | null>(null)
   const [loading, setLoading] = useState(true)
   
-  // Store the last viewed date from sessionStorage
-  const [lastViewedDate, setLastViewedDate] = useState<string | null>(null)
-  
-  // Update page title with ticker and get last viewed date
+  // Update page title with ticker
   useEffect(() => {
     document.title = `${ticker} - EVOL Optimus`
-    
-    // Get last viewed date from sessionStorage
-    const storedDate = sessionStorage.getItem('lastEarningsDate')
-    if (storedDate) {
-      setLastViewedDate(storedDate)
-    }
   }, [ticker])
 
   // Fetch all data in a single call
@@ -144,9 +135,9 @@ export default function StockDetailPage() {
         <Button
           variant="outline"
           onClick={() => {
-            // Navigate to earnings page with the last viewed date if available
-            const dateParam = sessionStorage.getItem('lastEarningsDate') || lastViewedDate || new Date().toISOString().split('T')[0]
-            router.push(`/earnings?date=${dateParam}`)
+            // Simply go back to the earnings page without any date
+            // The earnings page will use URL param or default to current date
+            router.push('/earnings')
           }}
           size="sm"
         >
@@ -462,9 +453,9 @@ export default function StockDetailPage() {
         <Button
           variant="outline"
           onClick={() => {
-            // Navigate to earnings page with the last viewed date if available
-            const dateParam = lastViewedDate || sessionStorage.getItem('lastEarningsDate') || new Date().toISOString().split('T')[0]
-            router.push(`/earnings?date=${dateParam}`)
+            // Simply go back to the earnings page without any date
+            // The earnings page will use URL param or default to current date
+            router.push('/earnings')
           }}
           size="lg"
         >

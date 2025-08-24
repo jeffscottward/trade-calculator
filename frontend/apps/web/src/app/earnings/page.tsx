@@ -28,23 +28,7 @@ function EarningsPageContent() {
   // Get date from URL parameter
   const dateParam = searchParams.get('date')
   
-  // Redirect to current date ONLY if no date parameter is provided
-  useEffect(() => {
-    if (!dateParam) {
-      // Check if we have a stored date from navigation back from detail page
-      const storedDate = sessionStorage.getItem('lastEarningsDate')
-      if (storedDate) {
-        // Use the stored date instead of current date
-        router.replace(`/earnings?date=${storedDate}`, { scroll: false })
-      } else {
-        // No stored date, use current date
-        const currentDate = new Date()
-        const currentDateStr = format(currentDate, 'yyyy-MM-dd')
-        router.replace(`/earnings?date=${currentDateStr}`, { scroll: false })
-      }
-    }
-  }, [dateParam, router])
-  
+  // NO REDIRECTS - Always use the date from URL or default to current date
   const selectedDate = useMemo(() => {
     if (dateParam) {
       const parsedDate = parseISO(dateParam)
@@ -52,9 +36,8 @@ function EarningsPageContent() {
         return parsedDate
       }
     }
-    // Don't fallback to current date - let the redirect handle it
-    // This prevents the page from showing wrong date during initial load
-    return null
+    // Default to current date if no valid date parameter
+    return new Date()
   }, [dateParam])
   
   const [earningsDates, setEarningsDates] = useState<Date[]>([])
@@ -146,9 +129,7 @@ function EarningsPageContent() {
     // Update URL with new date
     const newDateStr = format(date, 'yyyy-MM-dd')
     
-    // Save to sessionStorage for navigation back from detail pages - ONLY when user actively selects
-    sessionStorage.setItem('lastEarningsDate', newDateStr)
-    
+    // NO SESSION STORAGE - Just update the URL
     router.replace(`/earnings?date=${newDateStr}`, { scroll: false })
     
     // Restore scroll position after a small delay to ensure DOM has updated
