@@ -8,10 +8,18 @@ interface EarningsCalendarProps {
   onDateSelect: (date: Date) => void
   earningsDates?: Date[]
   maxDate?: Date
+  selectedDate?: Date
 }
 
-export const EarningsCalendar = memo(function EarningsCalendar({ onDateSelect, earningsDates = [], maxDate }: EarningsCalendarProps) {
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
+export const EarningsCalendar = memo(function EarningsCalendar({ onDateSelect, earningsDates = [], maxDate, selectedDate: initialSelectedDate }: EarningsCalendarProps) {
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(initialSelectedDate || new Date())
+
+  // Sync with prop changes
+  useEffect(() => {
+    if (initialSelectedDate) {
+      setSelectedDate(initialSelectedDate)
+    }
+  }, [initialSelectedDate])
 
   useEffect(() => {
     if (selectedDate) {
