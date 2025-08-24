@@ -18,6 +18,8 @@ interface StockDetails {
   fiscalQuarterEnding: string
   lastYearEPS?: string
   numEstimates?: number
+  priority_score?: number
+  recommendation?: string
 }
 
 interface TradeAnalysis {
@@ -58,7 +60,7 @@ export default function StockDetailPage() {
     const fetchAllData = async () => {
       try {
         // Fetch everything in a single API call
-        const response = await fetch(`http://localhost:8000/api/stock/${ticker}/complete`)
+        const response = await fetch(`http://localhost:3000/api/stock/${ticker}/complete`)
         
         if (response.ok) {
           const data = await response.json()
@@ -75,6 +77,8 @@ export default function StockDetailPage() {
               fiscalQuarterEnding: data.details.fiscalQuarterEnding || data.details.fiscal_quarter_ending || '-',
               lastYearEPS: data.details.lastYearEPS || data.details.last_year_eps,
               numEstimates: data.details.numEstimates || data.details.num_estimates,
+              priority_score: data.details.priority_score || 0,
+              recommendation: data.details.recommendation,
             })
           }
           
@@ -318,6 +322,29 @@ export default function StockDetailPage() {
               </div>
             ) : analysis?.data ? (
               <div className="space-y-4">
+                {/* Priority Score */}
+                {stockDetails?.priority_score > 0 && stockDetails?.recommendation === 'RECOMMENDED' && (
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 rounded-lg p-4 border border-green-200 dark:border-green-800">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">Priority Score</p>
+                        <p className="text-3xl font-bold text-green-600 dark:text-green-400">
+                          {stockDetails.priority_score.toFixed(1)}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-muted-foreground">Max: 100</p>
+                        <div className="mt-2 w-32 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-gradient-to-r from-green-500 to-emerald-500" 
+                            style={{ width: `${Math.min(stockDetails.priority_score, 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
                 {analysis.data.current_iv !== 'N/A' && analysis.data.historical_iv !== 'N/A' ? (
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">

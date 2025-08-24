@@ -3,7 +3,6 @@
 
 -- Drop existing tables if they exist (for development)
 DROP TABLE IF EXISTS earnings_calendar CASCADE;
-DROP TABLE IF EXISTS earnings_import_history CASCADE;
 
 -- Create main earnings calendar table
 CREATE TABLE earnings_calendar (
@@ -34,19 +33,6 @@ CREATE INDEX idx_earnings_calendar_ticker ON earnings_calendar(ticker);
 CREATE INDEX idx_earnings_calendar_report_time ON earnings_calendar(report_time);
 CREATE INDEX idx_earnings_calendar_market_cap ON earnings_calendar(market_cap_numeric);
 CREATE INDEX idx_earnings_calendar_report_date_time ON earnings_calendar(report_date, report_time);
-
--- Create import history table to track bulk imports
-CREATE TABLE earnings_import_history (
-    id SERIAL PRIMARY KEY,
-    import_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    start_date DATE NOT NULL,
-    end_date DATE NOT NULL,
-    records_imported INTEGER NOT NULL,
-    source VARCHAR(50) DEFAULT 'NASDAQ',
-    status VARCHAR(20) DEFAULT 'completed',
-    error_message TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
 
 -- Create function to update the updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()

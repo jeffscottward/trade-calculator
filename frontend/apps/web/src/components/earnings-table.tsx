@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useRef, useCallback } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
   createColumnHelper,
   flexRender,
@@ -70,10 +71,15 @@ function formatMarketCap(marketCap?: string | number): string {
 }
 
 export function EarningsTable({ data }: EarningsTableProps) {
+  const router = useRouter()
   const [sorting, setSorting] = useState<SortingState>([
     {
       id: 'recommendation',
       desc: false, // false = ascending, which puts RECOMMENDED first
+    },
+    {
+      id: 'priority_score',
+      desc: true, // Secondary sort by priority score (high to low)
     }
   ])
   const [searchQuery, setSearchQuery] = useState('')
@@ -311,6 +317,42 @@ export function EarningsTable({ data }: EarningsTableProps) {
       minSize: 120,
       maxSize: 160,
     }),
+    columnHelper.accessor('priority_score', {
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          className="h-auto !px-0 py-0 font-medium text-sm justify-start text-left w-full"
+          style={{ padding: '0' }}
+        >
+          Priority
+          <ArrowUpDown className="ml-1 h-3 w-3" />
+        </Button>
+      ),
+      cell: (info) => {
+        const score = info.getValue()
+        const recommendation = info.row.original.recommendation
+        
+        // Only show scores for trades with recommendations
+        if (!score || score === 0 || recommendation === 'AVOID') {
+          return <span className="text-muted-foreground">-</span>
+        }
+        
+        return (
+          <span className="font-medium">
+            {score.toFixed(1)}
+          </span>
+        )
+      },
+      sortingFn: (rowA, rowB) => {
+        const a = rowA.getValue('priority_score') || 0
+        const b = rowB.getValue('priority_score') || 0
+        return a - b
+      },
+      size: 80,
+      minSize: 60,
+      maxSize: 100,
+    }),
     columnHelper.accessor('estimate', {
       header: ({ column }) => (
         <Button
@@ -436,7 +478,14 @@ export function EarningsTable({ data }: EarningsTableProps) {
           <tbody>
             {table.getRowModel().rows.length ? (
               table.getRowModel().rows.map((row) => (
-                <tr key={row.id} className="border-b hover:bg-muted/50">
+                <tr 
+                  key={row.id} 
+                  className="border-b hover:bg-muted/50 cursor-pointer"
+                  onClick={() => {
+                    const ticker = row.original.ticker
+                    router.push(`/earnings/${ticker}`)
+                  }}
+                >
                   {row.getVisibleCells().map((cell) => {
                     const colId = cell.column.id
                     const alignment = 

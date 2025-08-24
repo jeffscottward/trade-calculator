@@ -94,9 +94,9 @@ def store_earnings_data(earnings_data: List[Dict], report_date: date) -> bool:
                             fiscal_quarter_ending, recommendation, risk_level,
                             expected_move, position_size, iv_rank,
                             avg_volume_pass, iv_rv_ratio_pass, term_structure_pass,
-                            created_at, updated_at
+                            priority_score, created_at, updated_at
                         ) VALUES (
-                            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
                         )
                     """
                     
@@ -130,6 +130,7 @@ def store_earnings_data(earnings_data: List[Dict], report_date: date) -> bool:
                         criteria.get('volume_check', False),
                         criteria.get('iv_rv_ratio', False),
                         criteria.get('term_structure', False),
+                        earning.get('priority_score', 0.0),  # Add priority score
                         datetime.now(),
                         datetime.now()
                     )
@@ -172,7 +173,7 @@ async def fetch_and_store_earnings_for_date(date_str: str, force_refresh: bool =
     
     try:
         # Import here to avoid circular imports
-        from main import fetch_earnings_from_api, analyze_earnings_list
+        from .main import fetch_earnings_from_api, analyze_earnings_list
         
         # Fetch from API
         logger.info(f"Calling fetch_earnings_from_api for {date_str}")
@@ -265,7 +266,7 @@ def get_cached_earnings_for_date(date_str: str) -> Optional[List[Dict]]:
                     priority_score
                 FROM earnings_calendar
                 WHERE report_date = %s
-                ORDER BY recommendation ASC, ticker ASC
+                ORDER BY priority_score DESC NULLS LAST, market_cap_numeric DESC NULLS LAST
             """
             
             cursor.execute(sql, (date_str,))

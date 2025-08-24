@@ -14,9 +14,10 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import logging
 import asyncio
+import math
 
 # Import database operations module
-import database_operations
+from . import database_operations
 
 load_dotenv()
 
@@ -25,6 +26,76 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Earnings Calendar API")
+
+# Priority Scoring Functions
+def parse_market_cap_string(market_cap_str: str) -> float:
+    """Parse market cap string like '$1.5B' to numeric value."""
+    if not market_cap_str:
+        return 0
+    
+    clean_str = market_cap_str.replace('$', '').replace(',', '').strip()
+    
+    if not clean_str or clean_str == '-':
+        return 0
+    
+    try:
+        if clean_str.endswith('T'):
+            return float(clean_str[:-1]) * 1_000_000_000_000
+        elif clean_str.endswith('B'):
+            return float(clean_str[:-1]) * 1_000_000_000
+        elif clean_str.endswith('M'):
+            return float(clean_str[:-1]) * 1_000_000
+        else:
+            return float(clean_str)
+    except (ValueError, AttributeError):
+        return 0
+
+def calculate_priority_score_components(iv_rv_ratio: float, term_slope: float, 
+                                       avg_volume_30d: float, market_cap: float) -> Dict:
+    """Calculate priority score with component breakdown."""
+    logger.debug(f"Calculating priority score - IV/RV: {iv_rv_ratio}, Slope: {term_slope}, Vol: {avg_volume_30d}, MCap: {market_cap}")
+    
+    # IV/RV Score (40% weight)
+    if iv_rv_ratio <= 1.0:
+        iv_rv_score = 0.0
+    else:
+        iv_rv_score = min(100.0, max(0.0, (iv_rv_ratio - 1.0) * 50))
+    
+    # Term Slope Score (30% weight)
+    if term_slope >= 0:
+        term_slope_score = 0.0
+    else:
+        term_slope_score = min(100.0, max(0.0, abs(term_slope) * 200))
+    
+    # Liquidity Score (20% weight)
+    if avg_volume_30d < 1_000_000:
+        liquidity_score = 0.0
+    else:
+        log_volume = math.log10(avg_volume_30d)
+        liquidity_score = min(100.0, max(0.0, (log_volume - 6) * 50))
+    
+    # Market Cap Score (10% weight)
+    if market_cap < 1_000_000_000:
+        market_cap_score = 0.0
+    else:
+        log_cap = math.log10(market_cap)
+        market_cap_score = min(100.0, max(0.0, (log_cap - 9) * 33.33))
+    
+    # Calculate weighted total
+    priority_score = (
+        iv_rv_score * 0.40 +
+        term_slope_score * 0.30 +
+        liquidity_score * 0.20 +
+        market_cap_score * 0.10
+    )
+    
+    return {
+        'priority_score': round(priority_score, 2),
+        'iv_rv_score': round(iv_rv_score, 2),
+        'term_slope_score': round(term_slope_score, 2),
+        'liquidity_score': round(liquidity_score, 2),
+        'market_cap_score': round(market_cap_score, 2)
+    }
 
 # Configure CORS
 app.add_middleware(
@@ -197,7 +268,7 @@ async def get_quick_analysis(ticker: str):
     Returns simplified analysis for table display
     """
     try:
-        from analysis_engine import compute_recommendation, yang_zhang
+        from .analysis_engine import compute_recommendation, yang_zhang
         import yfinance as yf
         
         # Get real data from compute_recommendation
@@ -235,9 +306,17 @@ async def get_quick_analysis(ticker: str):
             recommendation = "AVOID"
             risk_level = "HIGH"
         
+        # Extract raw values for priority scoring
+        iv_rv_ratio_raw = result.get('iv_rv_ratio_raw', 1.0) 
+        term_structure_slope_raw = result.get('term_structure_slope_raw', 0.0)
+        avg_volume_raw = result.get('avg_volume_raw', 1000000)
+        
         return {
             "recommendation": recommendation,
-            "riskLevel": risk_level
+            "riskLevel": risk_level,
+            "iv_rv_ratio_raw": iv_rv_ratio_raw,
+            "term_structure_slope_raw": term_structure_slope_raw,
+            "avg_volume_raw": avg_volume_raw
         }
         
     except Exception as e:
@@ -329,13 +408,25 @@ async def get_earnings_by_date(date_str: str, include_analysis: bool = False, fo
                             num_estimates as "numEstimates",
                             last_year_eps as "lastYearEPS",
                             market_cap_numeric as "marketCapNumeric",
-                            eps_forecast_numeric as "epsForecastNumeric"
+                            eps_forecast_numeric as "epsForecastNumeric",
+                            priority_score,
+                            recommendation,
+                            risk_level as "riskLevel",
+                            expected_move,
+                            position_size,
+                            iv_rank,
+                            avg_volume_pass,
+                            iv_rv_ratio_pass,
+                            term_structure_pass
                         FROM earnings_calendar
                         WHERE report_date = %s
-                        ORDER BY market_cap_numeric DESC NULLS LAST
+                        ORDER BY priority_score DESC NULLS LAST, market_cap_numeric DESC NULLS LAST
                     """
                     cursor.execute(sql, (earnings_date,))
-                    earnings_list = cursor.fetchall()
+                    columns = [desc[0] for desc in cursor.description]
+                    earnings_list = []
+                    for row in cursor.fetchall():
+                        earnings_list.append(dict(zip(columns, row)))
                     
                     # Format the response
                     formatted_earnings = []
@@ -349,14 +440,26 @@ async def get_earnings_by_date(date_str: str, include_analysis: bool = False, fo
                             "fiscalQuarterEnding": earning["fiscalQuarterEnding"],
                             "estimate": earning["estimate"],
                             "numEstimates": earning["numEstimates"],
-                            "lastYearEPS": earning["lastYearEPS"]
+                            "lastYearEPS": earning["lastYearEPS"],
+                            "priority_score": earning.get("priority_score", 0.0),
+                            "recommendation": earning.get("recommendation", "AVOID"),
+                            "riskLevel": earning.get("riskLevel", "HIGH"),
+                            "expected_move": earning.get("expected_move"),
+                            "position_size": earning.get("position_size", "0%"),
+                            "iv_rank": earning.get("iv_rank"),
+                            "criteria_met": {
+                                "volume_check": earning.get("avg_volume_pass", False),
+                                "iv_rv_ratio": earning.get("iv_rv_ratio_pass", False),
+                                "term_structure": earning.get("term_structure_pass", False)
+                            }
                         }
                         
-                        # Optionally include quick analysis
+                        # Optionally override with fresh analysis
                         if include_analysis:
                             analysis = await get_quick_analysis(earning["ticker"])
-                            earning_data["recommendation"] = analysis.get("recommendation", "AVOID")
-                            earning_data["riskLevel"] = analysis.get("riskLevel", "UNKNOWN")
+                            if analysis and not analysis.get("error"):
+                                earning_data["recommendation"] = analysis.get("recommendation", earning_data["recommendation"])
+                                earning_data["riskLevel"] = analysis.get("riskLevel", earning_data["riskLevel"])
                         
                         formatted_earnings.append(earning_data)
                     
@@ -472,7 +575,8 @@ async def get_stock_complete(ticker: str):
                     recommendation,
                     position_size,
                     expected_move,
-                    iv_rank
+                    iv_rank,
+                    priority_score
                 FROM earnings_calendar
                 WHERE ticker = %s
                 ORDER BY ticker, report_date DESC
@@ -498,7 +602,8 @@ async def get_stock_complete(ticker: str):
                     "recommendation": row_dict.get('recommendation'),
                     "position_size": row_dict.get('position_size'),
                     "expected_move": row_dict.get('expected_move'),
-                    "iv_rank": row_dict.get('iv_rank')
+                    "iv_rank": row_dict.get('iv_rank'),
+                    "priority_score": row_dict.get('priority_score')
                 }
                 
                 # Convert date to string
@@ -506,7 +611,7 @@ async def get_stock_complete(ticker: str):
                     stock_data['reportDate'] = stock_data['reportDate'].strftime("%Y-%m-%d")
                 
                 # Convert numeric fields
-                for field in ['position_size', 'expected_move', 'iv_rank']:
+                for field in ['position_size', 'expected_move', 'iv_rank', 'priority_score']:
                     if field in stock_data and stock_data[field] is not None:
                         try:
                             value = stock_data[field]
@@ -545,7 +650,7 @@ async def get_stock_complete(ticker: str):
     analysis_data = None
     try:
         # Import the analysis engine without GUI dependencies
-        from analysis_engine import compute_recommendation, yang_zhang
+        from .analysis_engine import compute_recommendation, yang_zhang
         import yfinance as yf
         
         # Get real data from compute_recommendation
@@ -694,7 +799,7 @@ async def get_stock_details(ticker: str):
                     stock_data['reportDate'] = stock_data['reportDate'].strftime("%Y-%m-%d")
                 
                 # Convert numeric fields
-                for field in ['position_size', 'expected_move', 'iv_rank']:
+                for field in ['position_size', 'expected_move', 'iv_rank', 'priority_score']:
                     if field in stock_data and stock_data[field] is not None:
                         try:
                             value = stock_data[field]
@@ -732,7 +837,7 @@ async def analyze_trade(ticker: str):
         logger.info(f"Starting analysis for {ticker}")
         
         # Import the analysis engine without GUI dependencies
-        from analysis_engine import compute_recommendation, yang_zhang
+        from .analysis_engine import compute_recommendation, yang_zhang
         import yfinance as yf
         
         # Get real data from compute_recommendation
@@ -931,22 +1036,55 @@ async def earnings_stream_with_analysis(date_str: str):
                             if 'market_cap' in full_analysis['data']:
                                 earning['market_cap_numeric'] = full_analysis['data']['market_cap']
                             
-                            # Calculate priority score for RECOMMENDED trades
-                            if earning.get('recommendation') == 'RECOMMENDED':
-                                try:
-                                    from analysis_engine import calculate_priority_score
-                                    # Get the raw analysis data for scoring
-                                    raw_analysis = await get_quick_analysis(ticker) 
-                                    if raw_analysis and not raw_analysis.get('error'):
-                                        priority_score = calculate_priority_score(raw_analysis)
-                                        earning['priority_score'] = priority_score
-                                        logger.info(f"Priority score for {ticker}: {priority_score}")
-                                    else:
-                                        earning['priority_score'] = 0.0
-                                except Exception as score_error:
-                                    logger.warning(f"Priority score calculation failed for {ticker}: {score_error}")
+                            # Calculate priority score for all trades
+                            try:
+                                # Get the necessary data for scoring
+                                raw_analysis = await get_quick_analysis(ticker) 
+                                if raw_analysis and not raw_analysis.get('error'):
+                                    # Extract values with defaults
+                                    iv_rv_ratio = raw_analysis.get('iv_rv_ratio_raw', 1.0)
+                                    term_slope = raw_analysis.get('term_structure_slope_raw', 0.0)
+                                    avg_volume = raw_analysis.get('avg_volume_raw', 1000000)
+                                    
+                                    # Parse market cap
+                                    market_cap_str = earning.get('marketCap', '0')
+                                    market_cap_numeric = parse_market_cap_string(market_cap_str)
+                                    
+                                    # Calculate scores
+                                    scores = calculate_priority_score_components(
+                                        iv_rv_ratio=iv_rv_ratio,
+                                        term_slope=term_slope,
+                                        avg_volume_30d=avg_volume,
+                                        market_cap=market_cap_numeric
+                                    )
+                                    
+                                    # Ensure CONSIDER stocks get a minimum priority score
+                                    # If recommendation is CONSIDER but score is 0, give it a base score
+                                    if earning.get('recommendation') == 'CONSIDER' and scores['priority_score'] == 0:
+                                        # Calculate a basic score based on the criteria that passed
+                                        base_score = 0
+                                        if earning.get('criteria_met', {}).get('iv_rv_ratio', False):
+                                            base_score += 3.0  # Base points for IV/RV pass
+                                        if earning.get('criteria_met', {}).get('term_structure', False):
+                                            base_score += 2.0  # Base points for term structure pass
+                                        if earning.get('criteria_met', {}).get('volume_check', False):
+                                            base_score += 1.0  # Base points for volume pass
+                                        scores['priority_score'] = base_score
+                                        logger.info(f"Assigned base priority score {base_score} to CONSIDER stock {ticker}")
+                                    
+                                    earning['priority_score'] = scores['priority_score']
+                                    earning['iv_rv_score'] = scores['iv_rv_score']
+                                    earning['term_slope_score'] = scores['term_slope_score']
+                                    earning['liquidity_score'] = scores['liquidity_score']
+                                    earning['market_cap_score'] = scores['market_cap_score']
+                                    earning['market_cap_numeric'] = market_cap_numeric
+                                    
+                                    logger.info(f"Priority score for {ticker}: {scores['priority_score']} (IV/RV: {iv_rv_ratio}, Slope: {term_slope}, Vol: {avg_volume}, MCap: {market_cap_numeric})")
+                                else:
                                     earning['priority_score'] = 0.0
-                            else:
+                                    logger.warning(f"No analysis data for {ticker}")
+                            except Exception as score_error:
+                                logger.warning(f"Priority score calculation failed for {ticker}: {score_error}")
                                 earning['priority_score'] = 0.0
                     except Exception as e:
                         logger.warning(f"Analysis warning for {ticker}: {e}")
