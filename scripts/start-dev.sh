@@ -112,12 +112,12 @@ fi
 
 # Start Next.js frontend
 echo -e "\n${GREEN}Starting Next.js frontend on port 3001...${NC}"
-cd frontend
+cd "$PROJECT_ROOT/frontend/apps/web"
 if [ ! -d "node_modules" ]; then
     echo -e "${YELLOW}Installing frontend dependencies...${NC}"
     pnpm install
 fi
-pnpm dev &
+pnpm dev --port 3001 &
 FRONTEND_PID=$!
 cd "$PROJECT_ROOT"
 echo -e "${GREEN}Next.js frontend started (PID: $FRONTEND_PID)${NC}"

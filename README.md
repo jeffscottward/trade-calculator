@@ -29,15 +29,20 @@ git clone https://github.com/jeffscottward/trade-calculator.git
 cd trade-calculator
 ```
 
-2. Create a virtual environment:
+2. Set up Python environment (backend):
 ```bash
+cd backend
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -r requirements.txt
+cd ..
 ```
 
-3. Install dependencies:
+3. Set up frontend environment:
 ```bash
-pip install -r requirements.txt
+cd frontend/apps/web
+pnpm install
+cd ../../..
 ```
 
 ### Running the Application

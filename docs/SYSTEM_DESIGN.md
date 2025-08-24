@@ -25,7 +25,9 @@ This document outlines the design for an automated trading system that implement
 ## Technology Stack
 
 ### Frontend: Next.js with TypeScript
+
 **Status: ✅ Implemented**
+
 - React-based UI with t-stack-base foundation
 - Interactive earnings calendar with month navigation
 - Real-time earnings data table with search/filter
@@ -33,14 +35,18 @@ This document outlines the design for an automated trading system that implement
 - Responsive design with Tailwind CSS
 
 ### Backend: FastAPI (Python)
+
 **Status: ✅ Implemented**
+
 - RESTful API endpoints for earnings data
 - Integration with multiple data sources
 - Trade analysis endpoint (mock implementation ready for calculator.py integration)
 - CORS configured for frontend communication
 
 ### Broker: Interactive Brokers
+
 **Status: 🔄 In Progress**
+
 - Client Portal Gateway configured on port 5001
 - Paper trading setup for testing
 - **Rationale:**
@@ -52,21 +58,27 @@ This document outlines the design for an automated trading system that implement
 ### Data Sources
 
 #### Primary: NASDAQ via finance_calendars
+
 **Status: ✅ Implemented**
+
 - Free access to all US stocks earnings data
 - Bulk data import capability
 - No API key required
 - Real-time updates available
 
 #### Secondary: NASDAQ API
+
 **Status: ✅ Implemented**
+
 - **Free**: No API key required
 - **Features**: US stocks earnings calendar
 - **Format**: JSON output
 - Filters out OTC/foreign stocks automatically
 
 #### Market Data: Yahoo Finance (yfinance)
+
 **Status: ✅ Configured**
+
 - Real-time stock prices
 - Options chains with Greeks
 - Historical price data for volatility calculations
@@ -75,6 +87,7 @@ This document outlines the design for an automated trading system that implement
 ## System Architecture
 
 ### Current Implementation
+
 ```
 ┌─────────────────────────────────────────────┐
 │         Next.js Frontend (Port 3001)        │
@@ -115,6 +128,7 @@ This document outlines the design for an automated trading system that implement
 ```
 
 ### Planned Broker Integration
+
 ```
 ┌─────────────────────────────────────────────┐
 │      Interactive Brokers Integration 🔄     │
@@ -130,6 +144,7 @@ This document outlines the design for an automated trading system that implement
 ### Implemented Tables
 
 #### earnings_calendar ✅
+
 ```sql
 CREATE TABLE earnings_calendar (
     id SERIAL PRIMARY KEY,
@@ -153,6 +168,7 @@ CREATE TABLE earnings_calendar (
 ```
 
 #### earnings_import_history ✅
+
 ```sql
 CREATE TABLE earnings_import_history (
     id SERIAL PRIMARY KEY,
@@ -170,6 +186,7 @@ CREATE TABLE earnings_import_history (
 ### Pending Tables (From Original Design)
 
 #### trades
+
 ```sql
 -- To be implemented when broker integration complete
 CREATE TABLE IF NOT EXISTS trades (
@@ -261,6 +278,7 @@ CREATE TABLE IF NOT EXISTS trades (
 ### Current Implementation
 
 #### .env (Required Variables)
+
 ```bash
 # Database
 DATABASE_URL=postgresql://user:pass@host/db
@@ -275,6 +293,7 @@ IB_PORT=5001
 ```
 
 #### automation/config.py
+
 ```python
 import os
 from dotenv import load_dotenv
@@ -308,6 +327,7 @@ RISK_CONFIG = {
 ## Cron Job Configuration
 
 ### Implemented
+
 ```bash
 # Daily earnings data update - 6:00 AM ET
 0 6 * * * /path/to/scripts/update_earnings_data.sh
@@ -317,6 +337,7 @@ RISK_CONFIG = {
 ```
 
 ### Planned
+
 ```bash
 # Daily trade scanner - 3:00 PM ET (1 hour before close)
 0 15 * * 1-5 /usr/bin/python3 /path/to/earnings_scanner.py
@@ -331,11 +352,13 @@ RISK_CONFIG = {
 ## Testing Strategy
 
 ### Current Testing
+
 1. **Frontend**: Manual testing with mock data removed, using real API data
 2. **API**: Testing with curl/Postman
 3. **Data Import**: Successfully importing NASDAQ earnings data
 
 ### Planned Testing
+
 1. **Backtesting**: Historical simulation on 2023-2024 data
 2. **Paper Trading**: 30-day trial with IB paper account
 3. **Limited Live**: Start with 1% position sizes
@@ -366,6 +389,7 @@ RISK_CONFIG = {
 ## Architecture Decisions
 
 ### Why Database-First for Earnings Data
+
 - Eliminates API rate limiting issues
 - Provides sub-50ms response times
 - Ensures data availability offline
@@ -373,6 +397,7 @@ RISK_CONFIG = {
 - Reduces external dependencies
 
 ### Why FastAPI over Next.js API Routes
+
 - Better Python ecosystem integration
 - Direct access to trading libraries (yfinance, ib_insync)
 - Cleaner separation of concerns
@@ -380,6 +405,7 @@ RISK_CONFIG = {
 - Avoids confusion between two API servers
 
 ### Why NASDAQ via finance_calendars
+
 - Free access to all US stocks
 - No API key required
 - Bulk download capability
@@ -388,11 +414,13 @@ RISK_CONFIG = {
 ## Monitoring & Alerts
 
 ### Implemented
+
 - Import history tracking in database
 - API fallback monitoring
 - Console logging for debugging
 
 ### Planned
+
 - Failed trade execution alerts
 - Position size limit warnings
 - Unusual market condition detection

@@ -17,30 +17,36 @@ The Python codebase is organized into several key directories and modules:
 ```
 
 ## 1. API Directory (`/api`)
+
 **Purpose**: FastAPI backend server for the web frontend
 
-### Core Files:
+### Core Files
+
 - **`main.py`** - FastAPI server with earnings calendar endpoints
   - Serves earnings data to Next.js frontend
   - Handles CORS for localhost:3000/3001
   - Provides SSE streaming for progress updates
   - Caches NASDAQ API responses (5-minute cache)
 
-### Data Fetching:
+### Data Fetching
+
 - **`nasdaq_earnings.py`** - NASDAQ earnings calendar API integration
 - **`analysis_engine.py`** - Options analysis and volatility calculations
 - **`database_operations.py`** - PostgreSQL/Neon DB operations
 
-### Scheduled Jobs:
+### Scheduled Jobs
+
 - **`cron_daily_fetch.py`** - Daily earnings data fetch (9 AM ET)
 - **`cron_pretrade_fetch.py`** - Pre-trade data refresh (3:50 PM ET)
 - **`fetch_august_data.py`** - Historical data importer
 - **`setup_cron.sh`** - API data fetching cron configuration
 
 ## 2. Automation Directory (`/automation`)
+
 **Purpose**: Core automated trading system
 
-### Main Components:
+### Main Components
+
 - **`main.py`** - System orchestrator that coordinates all components
 - **`config.py`** - Central configuration (loads from .env)
 - **`earnings_scanner.py`** - Scans for qualifying earnings events
@@ -54,21 +60,24 @@ The Python codebase is organized into several key directories and modules:
   - 20% max exposure
   - Daily loss limits
 
-### IB Integration:
+### IB Integration
+
 - **`ib_api_client.py`** - Client Portal REST API wrapper
   - Authentication handling
   - Calendar spread order structure
   - Contract search and validation
 - **`earnings_data_importer.py`** - Bulk data import utilities
 
-### Test Scripts:
+### Test Scripts
+
 - **`test_ib_simple.py`** - Basic connectivity test
 - **`test_ib_connection.py`** - Authentication verification  
 - **`test_ib_api_full.py`** - Comprehensive API test suite
 - **`test_trade_flow.py`** - Complete trading workflow test
 - **`test_real_paper_trade.py`** - Live paper trading test
 
-### Sub-modules:
+### Sub-modules
+
 - **`database/`** - Database management
   - `db_manager.py` - PostgreSQL operations
   - `init_db.py` - Schema initialization
@@ -78,6 +87,7 @@ The Python codebase is organized into several key directories and modules:
   - `notifications.py` - Email/Discord alerts
 
 ## 3. Scripts Directory (`/scripts`)
+
 **Purpose**: Development and debugging utilities
 
 - **`test_yfinance.py`** - Yahoo Finance API testing
@@ -87,7 +97,8 @@ The Python codebase is organized into several key directories and modules:
 
 ## 4. Root Level Files
 
-### Development Scripts:
+### Development Scripts
+
 - **`scripts/start-dev.sh`** - Unified startup script
   - Starts FastAPI backend (port 3000)
   - Starts Next.js frontend (port 3001)
@@ -107,12 +118,15 @@ The Python codebase is organized into several key directories and modules:
 ## Recommended Cleanup Actions
 
 ### 1. ~~Consolidate Duplicates~~ ✅ RESOLVED
+
 - Moved cron setup scripts to their respective folders
 - Both are now named `setup_cron.sh` in their own directories
 - Created master `setup_cron.sh` selector script in scripts folder
 
 ### 2. Organize Test Scripts
+
 - Move all test files to a dedicated `tests/` directory:
+
   ```
   tests/
   ├── ib/
@@ -127,15 +141,18 @@ The Python codebase is organized into several key directories and modules:
   ```
 
 ### 3. Separate Concerns
+
 - `api/` should only contain FastAPI-related code
 - Move `analysis_engine.py` to `automation/utils/` since it's shared
 - Consider moving database operations to `automation/database/`
 
 ### 4. ~~Environment Management~~ ✅ RESOLVED
+
 - Removed venv from root
 - Backend has its own venv (gitignored)
 
 ### 5. Documentation
+
 - Each major directory should have its own README.md
 - Consider adding docstrings to all main classes/functions
 
@@ -162,6 +179,7 @@ The Python codebase is organized into several key directories and modules:
 ## Current Status
 
 ✅ **Working**:
+
 - FastAPI backend serving earnings data
 - IB Client Portal authentication
 - Database connectivity
@@ -169,6 +187,7 @@ The Python codebase is organized into several key directories and modules:
 - All IB API tests passing
 
 🔧 **Needs Attention**:
+
 - Consolidate duplicate cron scripts
 - Remove venv from repository
 - Organize test files

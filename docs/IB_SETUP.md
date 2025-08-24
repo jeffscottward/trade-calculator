@@ -3,12 +3,14 @@
 ## Overview
 
 This system supports two different IB API connections:
+
 1. **Client Portal API** (REST API) - For account info and simple orders
 2. **TWS API** (Socket-based) - For robust automated trading
 
 ## Current Setup: Client Portal Gateway
 
 ### Installation
+
 The Client Portal Gateway is already included in the `clientportal.gw` directory.
 
 ### Starting the Gateway
@@ -28,10 +30,10 @@ The gateway runs on port 5001 (configured to avoid conflicts with port 5000).
 
 **IMPORTANT**: The Client Portal Gateway requires manual browser-based authentication. This is a limitation of the IB Client Portal API.
 
-#### Steps to Authenticate:
+#### Steps to Authenticate
 
 1. Start the Client Portal Gateway (runs on port 5001)
-2. Open your browser and navigate to: https://localhost:5001
+2. Open your browser and navigate to: <https://localhost:5001>
 3. Accept the self-signed certificate warning
 4. Log in with your IB credentials:
    - **Check `.env` file for `IB_BROWSER_USERNAME`**
@@ -54,7 +56,7 @@ For fully automated trading without manual authentication, use TWS or IB Gateway
 
 ### Download and Install
 
-1. Download IB Gateway from: https://www.interactivebrokers.com/en/index.php?f=5041
+1. Download IB Gateway from: <https://www.interactivebrokers.com/en/index.php?f=5041>
 2. Install and launch IB Gateway
 3. Log in with paper trading credentials
 
@@ -84,18 +86,21 @@ venv/bin/python automation/test_ib_simple.py
 ```
 
 Expected output:
+
 - ✅ Client Portal is running (after manual login)
 - ✅ TWS/Gateway connected (if using IB Gateway)
 
 ## Trade Execution Flow
 
 ### Using Client Portal API
+
 1. Ensure Client Portal Gateway is running
 2. Complete browser authentication
 3. Keep browser tab open
 4. Execute trades via `ib_api_client.py`
 
 ### Using TWS API (Recommended)
+
 1. Ensure IB Gateway is running and configured
 2. No manual authentication needed after initial setup
 3. Execute trades via `trade_executor.py`
@@ -105,21 +110,26 @@ Expected output:
 ### Client Portal Issues
 
 **Error: 401 Unauthorized**
-- Solution: Complete browser authentication at https://localhost:5001
+
+- Solution: Complete browser authentication at <https://localhost:5001>
 
 **Error: Connection refused on port 5001**
+
 - Solution: Start Client Portal Gateway with `./scripts/start-dev.sh`
 
 **Error: Certificate warning**
+
 - Solution: This is expected. Accept the self-signed certificate.
 
 ### TWS/IB Gateway Issues
 
 **Error 502: Couldn't connect to TWS**
+
 - Solution: Ensure IB Gateway is running on port 7497
 - Check API settings are enabled
 
 **Error: No security definition found**
+
 - Solution: Ensure market data subscriptions are active
 
 ## Best Practices
@@ -140,12 +150,14 @@ Expected output:
 ## API Limitations
 
 ### Client Portal API
+
 - Requires manual browser authentication
 - Session expires after inactivity
 - Limited to simpler order types
 - Good for account info queries
 
 ### TWS API
+
 - Full automation capability
 - Supports all order types
 - Better for high-frequency operations
@@ -153,6 +165,6 @@ Expected output:
 
 ## Support
 
-- IB API Documentation: https://www.interactivebrokers.com/api/doc.html
-- Discord Community: https://discord.gg/krdByJHuHc
-- IB Support: api@ibkr.com
+- IB API Documentation: <https://www.interactivebrokers.com/api/doc.html>
+- Discord Community: <https://discord.gg/krdByJHuHc>
+- IB Support: <api@ibkr.com>

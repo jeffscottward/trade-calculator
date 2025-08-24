@@ -202,11 +202,29 @@
         ],
         "priority": "medium",
         "subtasks": []
+      },
+      {
+        "id": 16,
+        "title": "Reorganize Project Structure with Backend/Frontend Separation",
+        "description": "Move all Python code to backend/ directory, all documentation to docs/ directory, fix import paths and CORS configuration, update start-dev.sh script for new structure, and remove obsolete top-level venv folder",
+        "details": "",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          7
+        ],
+        "priority": "high",
+        "subtasks": []
       }
     ],
     "metadata": {
       "created": "2025-08-21T23:19:00.050Z",
-      "updated": "2025-08-22T20:11:07.164Z",
+      "updated": "2025-08-24T02:56:57.465Z",
       "description": "Tasks for master context"
     }
   }

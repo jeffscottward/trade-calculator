@@ -37,7 +37,8 @@ Note: Some tasks may require a visible browser (e.g., visual debugging, user int
 ### Environment Setup
 
 ```bash
-# Create and activate virtual environment
+# Create and activate virtual environment (in backend directory)
+cd backend
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 
