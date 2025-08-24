@@ -50,9 +50,18 @@ export default function StockDetailPage() {
   const [analysis, setAnalysis] = useState<TradeAnalysis | null>(null)
   const [loading, setLoading] = useState(true)
   
-  // Update page title with ticker
+  // Store the last viewed date from sessionStorage
+  const [lastViewedDate, setLastViewedDate] = useState<string | null>(null)
+  
+  // Update page title with ticker and get last viewed date
   useEffect(() => {
     document.title = `${ticker} - EVOL Optimus`
+    
+    // Get last viewed date from sessionStorage
+    const storedDate = sessionStorage.getItem('lastEarningsDate')
+    if (storedDate) {
+      setLastViewedDate(storedDate)
+    }
   }, [ticker])
 
   // Fetch all data in a single call
@@ -134,7 +143,11 @@ export default function StockDetailPage() {
       <div className="mb-4">
         <Button
           variant="outline"
-          onClick={() => router.back()}
+          onClick={() => {
+            // Navigate to earnings page with the last viewed date if available
+            const dateParam = lastViewedDate || new Date().toISOString().split('T')[0]
+            router.push(`/earnings?date=${dateParam}`)
+          }}
           size="sm"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -362,13 +375,13 @@ export default function StockDetailPage() {
                   </div>
                 )}
                 
-                {analysis.data.iv_rank > 0 && (
+                {analysis.data.iv_rank !== undefined && analysis.data.iv_rank !== null && (
                   <div className="space-y-2">
                     <p className="text-sm text-muted-foreground">IV Rank</p>
                     <div className="w-full bg-secondary rounded-full h-2">
                       <div 
                         className="bg-primary h-2 rounded-full"
-                        style={{ width: `${analysis.data.iv_rank}%` }}
+                        style={{ width: `${Math.min(Math.max(analysis.data.iv_rank, 0), 100)}%` }}
                       />
                     </div>
                     <p className="text-sm font-medium">{analysis.data.iv_rank}%</p>

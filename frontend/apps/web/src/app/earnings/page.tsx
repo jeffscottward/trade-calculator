@@ -28,12 +28,15 @@ function EarningsPageContent() {
   // Get date from URL parameter
   const dateParam = searchParams.get('date')
   
-  // Redirect to current date if no date parameter is provided
+  // Redirect to current date ONLY if no date parameter is provided
   useEffect(() => {
     if (!dateParam) {
       const currentDate = new Date()
       const currentDateStr = format(currentDate, 'yyyy-MM-dd')
-      router.replace(`/earnings?date=${currentDateStr}`)
+      router.replace(`/earnings?date=${currentDateStr}`, { scroll: false })
+    } else {
+      // Save the current date to sessionStorage for navigation back from detail pages
+      sessionStorage.setItem('lastEarningsDate', dateParam)
     }
   }, [dateParam, router])
   
@@ -136,6 +139,10 @@ function EarningsPageContent() {
     
     // Update URL with new date
     const newDateStr = format(date, 'yyyy-MM-dd')
+    
+    // Save to sessionStorage for navigation back from detail pages
+    sessionStorage.setItem('lastEarningsDate', newDateStr)
+    
     router.replace(`/earnings?date=${newDateStr}`, { scroll: false })
     
     // Restore scroll position after a small delay to ensure DOM has updated
