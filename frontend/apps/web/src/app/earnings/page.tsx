@@ -31,12 +31,17 @@ function EarningsPageContent() {
   // Redirect to current date ONLY if no date parameter is provided
   useEffect(() => {
     if (!dateParam) {
-      const currentDate = new Date()
-      const currentDateStr = format(currentDate, 'yyyy-MM-dd')
-      router.replace(`/earnings?date=${currentDateStr}`, { scroll: false })
-    } else {
-      // Save the current date to sessionStorage for navigation back from detail pages
-      sessionStorage.setItem('lastEarningsDate', dateParam)
+      // Check if we have a stored date from navigation back from detail page
+      const storedDate = sessionStorage.getItem('lastEarningsDate')
+      if (storedDate) {
+        // Use the stored date instead of current date
+        router.replace(`/earnings?date=${storedDate}`, { scroll: false })
+      } else {
+        // No stored date, use current date
+        const currentDate = new Date()
+        const currentDateStr = format(currentDate, 'yyyy-MM-dd')
+        router.replace(`/earnings?date=${currentDateStr}`, { scroll: false })
+      }
     }
   }, [dateParam, router])
   
@@ -47,8 +52,9 @@ function EarningsPageContent() {
         return parsedDate
       }
     }
-    // Fallback to current date while redirect is happening
-    return new Date()
+    // Don't fallback to current date - let the redirect handle it
+    // This prevents the page from showing wrong date during initial load
+    return null
   }, [dateParam])
   
   const [earningsDates, setEarningsDates] = useState<Date[]>([])
@@ -140,7 +146,7 @@ function EarningsPageContent() {
     // Update URL with new date
     const newDateStr = format(date, 'yyyy-MM-dd')
     
-    // Save to sessionStorage for navigation back from detail pages
+    // Save to sessionStorage for navigation back from detail pages - ONLY when user actively selects
     sessionStorage.setItem('lastEarningsDate', newDateStr)
     
     router.replace(`/earnings?date=${newDateStr}`, { scroll: false })
@@ -176,16 +182,21 @@ function EarningsPageContent() {
               <CardTitle>Select Date</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="mb-4 p-3 bg-muted rounded-lg">
-                <p className="text-sm font-medium">
-                  Selected: {format(selectedDate, 'MMMM d, yyyy')}
-                </p>
-              </div>
-              <EarningsCalendar 
-                onDateSelect={handleDateSelect}
-                earningsDates={earningsDates}
-                maxDate={DYNAMIC_CUTOFF}
-              />
+              {selectedDate && (
+                <div className="mb-4 p-3 bg-muted rounded-lg">
+                  <p className="text-sm font-medium">
+                    Selected: {format(selectedDate, 'MMMM d, yyyy')}
+                  </p>
+                </div>
+              )}
+              {selectedDate && (
+                <EarningsCalendar 
+                  onDateSelect={handleDateSelect}
+                  earningsDates={earningsDates}
+                  maxDate={DYNAMIC_CUTOFF}
+                  selectedDate={selectedDate}
+                />
+              )}
             </CardContent>
           </Card>
         </div>

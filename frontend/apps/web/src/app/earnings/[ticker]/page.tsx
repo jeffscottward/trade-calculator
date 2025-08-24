@@ -145,7 +145,7 @@ export default function StockDetailPage() {
           variant="outline"
           onClick={() => {
             // Navigate to earnings page with the last viewed date if available
-            const dateParam = lastViewedDate || new Date().toISOString().split('T')[0]
+            const dateParam = sessionStorage.getItem('lastEarningsDate') || lastViewedDate || new Date().toISOString().split('T')[0]
             router.push(`/earnings?date=${dateParam}`)
           }}
           size="sm"
@@ -461,7 +461,11 @@ export default function StockDetailPage() {
       <div className="mt-8">
         <Button
           variant="outline"
-          onClick={() => router.back()}
+          onClick={() => {
+            // Navigate to earnings page with the last viewed date if available
+            const dateParam = lastViewedDate || sessionStorage.getItem('lastEarningsDate') || new Date().toISOString().split('T')[0]
+            router.push(`/earnings?date=${dateParam}`)
+          }}
           size="lg"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />

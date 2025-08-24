@@ -708,13 +708,26 @@ async def get_stock_complete(ticker: str):
             if expected_move is None:
                 expected_move = f"{current_price * 0.05:.1f}%" if current_price else "N/A"
             
-            # Calculate IV rank with improved scaling
-            # Historical data shows most earnings IVs range from 20% to 100%+
-            # Use a more realistic scale that doesn't cap at 60%
+            # Calculate IV rank using a percentile-based approach
+            # This provides better distribution for extreme values
             front_iv = result.get('front_iv', 0.35)
-            # Map IV from 20% (low) to 80% (high) for a more realistic distribution
-            # Values above 80% will still show high rank but not always 100%
-            iv_rank = min(100, max(0, int((front_iv - 0.20) / (0.80 - 0.20) * 100)))
+            
+            # Use a logarithmic scale for better distribution
+            # Most earnings IVs range from 20% to 150%+
+            if front_iv <= 0.20:  # Below 20% IV
+                iv_rank = int(front_iv / 0.20 * 20)  # 0-20 rank
+            elif front_iv <= 0.40:  # 20-40% IV
+                iv_rank = 20 + int((front_iv - 0.20) / 0.20 * 20)  # 20-40 rank
+            elif front_iv <= 0.60:  # 40-60% IV
+                iv_rank = 40 + int((front_iv - 0.40) / 0.20 * 20)  # 40-60 rank
+            elif front_iv <= 0.80:  # 60-80% IV
+                iv_rank = 60 + int((front_iv - 0.60) / 0.20 * 15)  # 60-75 rank
+            elif front_iv <= 1.00:  # 80-100% IV
+                iv_rank = 75 + int((front_iv - 0.80) / 0.20 * 10)  # 75-85 rank
+            elif front_iv <= 1.50:  # 100-150% IV
+                iv_rank = 85 + int((front_iv - 1.00) / 0.50 * 10)  # 85-95 rank
+            else:  # Above 150% IV
+                iv_rank = min(100, 95 + int((front_iv - 1.50) / 0.50 * 5))  # 95-100 rank
             
             analysis_data = {
                 "current_iv": f"{front_iv * 100:.1f}%",
@@ -886,10 +899,24 @@ async def analyze_trade(ticker: str):
             back_month = None
             front_iv = result.get('front_iv', 0.35)
         
-        # Calculate IV rank with improved scaling
-        # Map IV from 20% (low) to 80% (high) for a more realistic distribution
+        # Calculate IV rank using a percentile-based approach
         current_iv = front_iv if front_iv else 0.35
-        iv_rank = min(100, max(0, int((current_iv - 0.20) / (0.80 - 0.20) * 100)))
+        
+        # Use a logarithmic scale for better distribution
+        if current_iv <= 0.20:  # Below 20% IV
+            iv_rank = int(current_iv / 0.20 * 20)  # 0-20 rank
+        elif current_iv <= 0.40:  # 20-40% IV
+            iv_rank = 20 + int((current_iv - 0.20) / 0.20 * 20)  # 20-40 rank
+        elif current_iv <= 0.60:  # 40-60% IV
+            iv_rank = 40 + int((current_iv - 0.40) / 0.20 * 20)  # 40-60 rank
+        elif current_iv <= 0.80:  # 60-80% IV
+            iv_rank = 60 + int((current_iv - 0.60) / 0.20 * 15)  # 60-75 rank
+        elif current_iv <= 1.00:  # 80-100% IV
+            iv_rank = 75 + int((current_iv - 0.80) / 0.20 * 10)  # 75-85 rank
+        elif current_iv <= 1.50:  # 100-150% IV
+            iv_rank = 85 + int((current_iv - 1.00) / 0.50 * 10)  # 85-95 rank
+        else:  # Above 150% IV
+            iv_rank = min(100, 95 + int((current_iv - 1.50) / 0.50 * 5))  # 95-100 rank
         
         # Determine recommendation based on criteria
         avg_volume_pass = result.get('avg_volume', False)
