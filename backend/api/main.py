@@ -18,6 +18,8 @@ import math
 
 # Import database operations module
 from . import database_operations
+# Import routes
+from .routes import trades
 
 load_dotenv()
 
@@ -26,6 +28,9 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Earnings Calendar API")
+
+# Include routers
+app.include_router(trades.router)
 
 # Priority Scoring Functions
 def parse_market_cap_string(market_cap_str: str) -> float:
