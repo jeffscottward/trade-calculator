@@ -6,7 +6,7 @@ Fetches historical earnings and options data to simulate calendar spread trades
 
 import os
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date as date_type
 from typing import Dict, List, Optional, Tuple, Any
 import pandas as pd
 import numpy as np
@@ -82,14 +82,15 @@ class HistoricalBacktest:
                 eps_forecast_numeric,
                 last_year_eps_numeric,
                 expected_move,
-                avg_daily_volume,
-                iv_percentile,
-                term_structure_slope,
-                iv_rv_ratio,
+                CASE WHEN avg_volume_pass THEN 2000000 ELSE 500000 END as avg_daily_volume,
+                iv_rank as iv_percentile,
+                CASE WHEN term_structure_pass THEN -0.5 ELSE 0.5 END as term_structure_slope,
+                CASE WHEN iv_rv_ratio_pass THEN 1.5 ELSE 0.8 END as iv_rv_ratio,
                 priority_score
             FROM earnings_calendar
             WHERE report_date BETWEEN %s AND %s
                 AND report_time IN ('time-after-hours', 'time-pre-market')
+                AND expected_move IS NOT NULL
             ORDER BY report_date, priority_score DESC
         """
         
@@ -122,7 +123,13 @@ class HistoricalBacktest:
             conid = contract.get('conid')
             
             # Calculate days to look back from today
-            days_back = (datetime.now() - date).days
+            # Convert date to datetime if it's a date object
+            if isinstance(date, date_type) and not isinstance(date, datetime):
+                target_date = datetime.combine(date, datetime.min.time())
+            else:
+                target_date = date
+            
+            days_back = (datetime.now() - target_date).days
             
             # Get historical data
             hist_data = self.ib_client.get_historical_data(
