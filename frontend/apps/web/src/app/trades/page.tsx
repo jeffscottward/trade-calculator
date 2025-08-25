@@ -240,11 +240,11 @@ export default function TradesPage() {
           // Map API response to frontend format
           const mappedTrades = executedData.trades?.map((trade: any) => ({
             ...trade,
-            earningsDate: trade.entryDate ? new Date(trade.entryDate) : new Date(),
+            earningsDate: trade.earningsDate ? new Date(trade.earningsDate) : new Date(),
             entryDate: trade.entryDate ? new Date(trade.entryDate) : new Date(),
-            exitDate: trade.exitDate ? new Date(trade.exitDate) : new Date(),
-            pnlPercent: trade.pnl && trade.netDebit ? (trade.pnl / (trade.netDebit * 100)) * 100 : 0
+            exitDate: trade.exitDate ? new Date(trade.exitDate) : new Date()
           })) || []
+          console.log('🚀 ~ file: page.tsx:248 → mappedTrades:', mappedTrades)
           setExecutedTrades(mappedTrades.length > 0 ? mappedTrades : mockExecutedTrades)
         } else {
           setExecutedTrades(mockExecutedTrades)
@@ -257,10 +257,10 @@ export default function TradesPage() {
           // Map API response to frontend format
           const mappedHoldings = holdingsData.holdings?.map((holding: any) => ({
             ...holding,
-            earningsDate: holding.expectedExit ? new Date(holding.expectedExit) : new Date(),
-            entryDate: holding.entryDate ? new Date(holding.entryDate) : new Date(),
-            unrealizedPnlPercent: holding.unrealizedPnl && holding.netDebit ? (holding.unrealizedPnl / (holding.netDebit * 100)) * 100 : 0
+            earningsDate: holding.earningsDate ? new Date(holding.earningsDate) : new Date(),
+            entryDate: holding.entryDate ? new Date(holding.entryDate) : new Date()
           })) || []
+          console.log('🚀 ~ file: page.tsx:264 → mappedHoldings:', mappedHoldings)
           setCurrentHoldings(mappedHoldings.length > 0 ? mappedHoldings : mockCurrentHoldings)
         } else {
           setCurrentHoldings(mockCurrentHoldings)
@@ -583,6 +583,10 @@ export default function TradesPage() {
                 tick={{ fontSize: 12 }}
                 tickFormatter={(value) => format(new Date(value), 'MMM d')}
                 className="text-muted-foreground"
+                interval={0}
+                angle={-45}
+                textAnchor="end"
+                height={60}
               />
               <YAxis 
                 tick={{ fontSize: 12 }}
