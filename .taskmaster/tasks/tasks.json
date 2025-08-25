@@ -220,11 +220,24 @@
         ],
         "priority": "high",
         "subtasks": []
+      },
+      {
+        "id": 17,
+        "title": "Implement Historical Backtesting System",
+        "description": "Create a comprehensive backtesting system that can replay historical market data from 2 weeks ago and simulate calendar spread trades with paper trading account starting with $10,000",
+        "details": "Build a backtesting framework that:\n- Fetches 2 weeks of historical earnings and options data\n- Simulates our calendar spread strategy against past market conditions\n- Uses IB paper trading account with $10,000 starting capital\n- Applies all entry criteria (term structure, volume, IV/RV ratio)\n- Records simulated trades in database\n- Calculates actual P&L based on historical price movements\n- Provides performance metrics and analysis",
+        "testStrategy": "Test with known earnings events from 2 weeks ago, verify calculations match expected outcomes, compare with manual calculations",
+        "status": "pending",
+        "dependencies": [
+          7
+        ],
+        "priority": "high",
+        "subtasks": []
       }
     ],
     "metadata": {
       "created": "2025-08-21T23:19:00.050Z",
-      "updated": "2025-08-24T02:56:57.465Z",
+      "updated": "2025-08-25T03:44:02.461Z",
       "description": "Tasks for master context"
     }
   }
